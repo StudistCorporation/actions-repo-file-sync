@@ -1,0 +1,19 @@
+name: Repo File Sync
+description: 'Synchronize files from repositories'
+author: 'Studist Corporation'
+
+branding:
+  icon: download
+  color: orange
+
+inputs:
+  token:
+    description: string
+  username:
+    description: string
+  email:
+    description: string
+
+runs:
+  using: node16
+  main: dist/index.js
