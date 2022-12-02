@@ -2,6 +2,21 @@
 
 This action will synchronizes files from the specified repository and creates a Pull Request with generated GitHub App token.
 
+## Architecture
+
+This action synchronizes files from the source repository to the repository where using that.  
+
+```mermaid
+graph LR
+
+R[Repo]
+SR1[Source Repo#1]
+SR2[Source Repo#2]
+
+SR1 --> R
+SR2 --> R
+```
+
 ## Usage
 
 Create `.github/repo-file-sync.yaml`.
