@@ -1,6 +1,7 @@
 {
   "name": "actions-repo-file-sync",
   "main": "dist/index.js",
+  "private": true,
   "scripts": {
     "build": "npx tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
