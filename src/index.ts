@@ -7,7 +7,6 @@ import { Octokit } from '@octokit/rest';
 import { loadConfig } from '@/config';
 
 const TMP_DIR = 'tmp'
-const WORK_REF = 'sync-files'
 
 const copyFiles = (repo: Repository, token: string) => {
   core.info(`Repo: ${repo.full_name}, Ref: ${repo.ref}`)
@@ -43,13 +42,13 @@ const main = async () => {
   }
 
   try {
-    execSync(`git fetch origin ${WORK_REF}`)
-    execSync(`git checkout -b ${WORK_REF} origin/${WORK_REF}`)
+    execSync(`git fetch origin ${config.workRef}`)
+    execSync(`git checkout -b ${config.workRef} origin/${config.workRef}`)
   } catch(error: unknown) {
     if (error instanceof Error) {
       core.error(error.message)
     }
-    execSync(`git checkout -b ${WORK_REF} ${baseBranch}`)
+    execSync(`git checkout -b ${config.workRef} ${baseBranch}`)
   }
 
   config.repos.forEach(async r => copyFiles(r, config.token))
@@ -63,20 +62,20 @@ const main = async () => {
       core.info('Committing')
       execSync('git add .')
       execSync('git commit -m "[repo-file-sync] Synchronize files"')
-      execSync(`git push origin ${WORK_REF}`)
+      execSync(`git push origin ${config.workRef}`)
 
       const pulls = await octokit.pulls.list({
         owner: owner,
         repo: repo,
         state: 'open',
-        head: `${owner}:${WORK_REF}`,
+        head: `${owner}:${config.workRef}`,
       })
       if (pulls.data.length === 0) {
         const pull = await octokit.pulls.create({
           owner: owner,
           repo: repo,
           title: '[repo-file-sync] Synchronize files',
-          head: WORK_REF,
+          head: config.workRef,
           base: baseBranch,
         })
         if (config.reviewers.length !== 0 || config.teamReviewers.length !== 0) {

@@ -79,3 +79,7 @@ If you specify a team, specify it to `team_reviewers` instead of `reviewers`.
 
 The `team_reviewers` to use in the pull request to be created.
 If you specify a user, specify it to `reviewers` instead of `team_reviewers`.
+
+### work_ref
+
+The `work_ref` to use in a branch for the pull request to be created.

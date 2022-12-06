@@ -19,6 +19,9 @@ inputs:
   team_reviewers:
     required: false
     description: 'The `team_reviewers` to use in the pull request to be created.'
+  work_ref:
+    required: false
+    description : 'The `work_ref` to use in a branch for the pull request to be created.'
 
 runs:
   using: node16

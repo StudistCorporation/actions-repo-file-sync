@@ -9,6 +9,7 @@ export const loadConfig = (): Config => {
     email: fetchActionInput('email'),
     reviewers: fetchActionInput('reviewers').split(','),
     teamReviewers: fetchActionInput('team_reviewers').split(','),
+    workRef: fetchActionInput('work_ref', 'repo-file-sync'),
     repos: []
   }
 
@@ -44,8 +45,8 @@ export const loadConfig = (): Config => {
   return config
 }
 
-const fetchActionInput = (key: string): string => {
-  return process.env[`INPUT_${key.toUpperCase()}`] || ''
+const fetchActionInput = (key: string, defaultValue: string = ''): string => {
+  return process.env[`INPUT_${key.toUpperCase()}`] || defaultValue
 }
 
 const loadConfigYaml= (): ConfigYaml => {

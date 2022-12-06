@@ -13340,6 +13340,9 @@ const loadConfig = () => {
         token: fetchActionInput('token'),
         username: fetchActionInput('username'),
         email: fetchActionInput('email'),
+        reviewers: fetchActionInput('reviewers').split(','),
+        teamReviewers: fetchActionInput('team_reviewers').split(','),
+        workRef: fetchActionInput('work_ref', 'repo-file-sync'),
         repos: []
     };
     try {
@@ -13371,8 +13374,8 @@ const loadConfig = () => {
     return config;
 };
 exports.loadConfig = loadConfig;
-const fetchActionInput = (key) => {
-    return process.env[`INPUT_${key.toUpperCase()}`] || '';
+const fetchActionInput = (key, defaultValue = '') => {
+    return process.env[`INPUT_${key.toUpperCase()}`] || defaultValue;
 };
 const loadConfigYaml = () => {
     const configName = "repo-file-sync";
@@ -13428,7 +13431,6 @@ const child_process_1 = __nccwpck_require__(2081);
 const rest_1 = __nccwpck_require__(5375);
 const config_1 = __nccwpck_require__(6373);
 const TMP_DIR = 'tmp';
-const WORK_REF = 'sync-files';
 const copyFiles = (repo, token) => {
     core.info(`Repo: ${repo.full_name}, Ref: ${repo.ref}`);
     try {
@@ -13459,14 +13461,14 @@ const main = async () => {
         fs_1.default.mkdirSync(TMP_DIR);
     }
     try {
-        (0, child_process_1.execSync)(`git fetch origin ${WORK_REF}`);
-        (0, child_process_1.execSync)(`git checkout -b ${WORK_REF} origin/${WORK_REF}`);
+        (0, child_process_1.execSync)(`git fetch origin ${config.workRef}`);
+        (0, child_process_1.execSync)(`git checkout -b ${config.workRef} origin/${config.workRef}`);
     }
     catch (error) {
         if (error instanceof Error) {
             core.error(error.message);
         }
-        (0, child_process_1.execSync)(`git checkout -b ${WORK_REF} ${baseBranch}`);
+        (0, child_process_1.execSync)(`git checkout -b ${config.workRef} ${baseBranch}`);
     }
     config.repos.forEach(async (r) => copyFiles(r, config.token));
     try {
@@ -13476,22 +13478,31 @@ const main = async () => {
         if ((0, child_process_1.execSync)('git diff --name-only').toString().trim() !== '') {
             core.info('Committing');
             (0, child_process_1.execSync)('git add .');
-            (0, child_process_1.execSync)('git commit -m "Sync files"');
-            (0, child_process_1.execSync)(`git push origin ${WORK_REF}`);
+            (0, child_process_1.execSync)('git commit -m "[repo-file-sync] Synchronize files"');
+            (0, child_process_1.execSync)(`git push origin ${config.workRef}`);
             const pulls = await octokit.pulls.list({
                 owner: owner,
                 repo: repo,
                 state: 'open',
-                head: `${owner}:${WORK_REF}`,
+                head: `${owner}:${config.workRef}`,
             });
             if (pulls.data.length === 0) {
-                await octokit.pulls.create({
+                const pull = await octokit.pulls.create({
                     owner: owner,
                     repo: repo,
-                    title: 'Sync files',
-                    head: WORK_REF,
+                    title: '[repo-file-sync] Synchronize files',
+                    head: config.workRef,
                     base: baseBranch,
                 });
+                if (config.reviewers.length !== 0 || config.teamReviewers.length !== 0) {
+                    await octokit.pulls.requestReviewers({
+                        owner: owner,
+                        repo: repo,
+                        pull_number: pull.data.number,
+                        reviewers: config.reviewers,
+                        team_reviewers: config.teamReviewers,
+                    });
+                }
             }
         }
     }

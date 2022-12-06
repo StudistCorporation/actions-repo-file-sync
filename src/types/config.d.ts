@@ -6,6 +6,7 @@ interface Config {
   email: string
   reviewers: string[]
   teamReviewers: string[]
+  workRef: string
   repos: Repository[]
 }
 
