@@ -62,7 +62,7 @@ const main = async () => {
     if (execSync('git diff --name-only').toString().trim() !== '') {
       core.info('Committing')
       execSync('git add .')
-      execSync('git commit -m "Sync files"')
+      execSync('git commit -m "[repo-file-sync] Synchronize files"')
       execSync(`git push origin ${WORK_REF}`)
 
       const pulls = await octokit.pulls.list({
@@ -75,7 +75,7 @@ const main = async () => {
         await octokit.pulls.create({
           owner: owner,
           repo: repo,
-          title: 'Sync files',
+          title: '[repo-file-sync] Synchronize files',
           head: WORK_REF,
           base: baseBranch,
         })
