@@ -72,13 +72,22 @@ const main = async () => {
         head: `${owner}:${WORK_REF}`,
       })
       if (pulls.data.length === 0) {
-        await octokit.pulls.create({
+        const pull = await octokit.pulls.create({
           owner: owner,
           repo: repo,
           title: '[repo-file-sync] Synchronize files',
           head: WORK_REF,
           base: baseBranch,
         })
+        if (config.reviewers.length !== 0 || config.teamReviewers.length !== 0) {
+          await octokit.pulls.requestReviewers({
+            owner: owner,
+            repo: repo,
+            pull_number: pull.data.number,
+            reviewers: config.reviewers,
+            team_reviewers: config.teamReviewers,
+          })
+        }
       }
     }
   } catch (error: unknown) {

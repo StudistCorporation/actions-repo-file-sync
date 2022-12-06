@@ -8,11 +8,17 @@ branding:
 
 inputs:
   token:
-    description: string
+    description: 'The `token` to used for authenticating with GitHub.'
   username:
-    description: string
+    description: 'The `username` to use in the git commit.'
   email:
-    description: string
+    description: 'The `email` to use in the git commit.'
+  reviewers:
+    required: false
+    description: 'The `reviewers` to use in the pull request to be created.'
+  team_reviewers:
+    required: false
+    description: 'The `team_reviewers` to use in the pull request to be created.'
 
 runs:
   using: node16

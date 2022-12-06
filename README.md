@@ -20,6 +20,7 @@ SR2 --> R
 ## Usage
 
 Create `.github/repo-file-sync.yaml`.
+This file contains the settings for repositories and files to be copied from.
 
 ```yaml
 # .github/repo-file-sync.yaml
@@ -59,12 +60,22 @@ steps:
 
 ### token
 
-The token to used for authenticating with Terraform Cloud.
+The `token` to used for authenticating with GitHub.
 
 ### username
 
-The username to use in the git commit.
+The `username` to use in the git commit.
 
 ### email
 
-The email to use in the git commit.
+The `email` to use in the git commit.
+
+### reviewers
+
+The `reviewers` to use in the pull request to be created.
+If you specify a team, specify it to `team_reviewers` instead of `reviewers`.
+
+### team_reviewers
+
+The `team_reviewers` to use in the pull request to be created.
+If you specify a user, specify it to `reviewers` instead of `team_reviewers`.

@@ -4,6 +4,8 @@ interface Config {
   token: string
   username: string
   email: string
+  reviewers: string[]
+  teamReviewers: string[]
   repos: Repository[]
 }
 

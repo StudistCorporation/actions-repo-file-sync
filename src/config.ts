@@ -7,6 +7,8 @@ export const loadConfig = (): Config => {
     token: fetchActionInput('token'),
     username: fetchActionInput('username'),
     email: fetchActionInput('email'),
+    reviewers: fetchActionInput('reviewers').split(','),
+    teamReviewers: fetchActionInput('team_reviewers').split(','),
     repos: []
   }
 
