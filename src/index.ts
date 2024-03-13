@@ -19,8 +19,9 @@ const copyFiles = (repo: Repository, token: string) => {
       `git clone https://x-access-token:${token}@github.com/${repo.full_name}.git ${repoDir}`
     );
     const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
+    core.info(`Diff files are ${srcFiles}`)
     const mergedPulls = repo.files ? execSync(
-        `git log origin  --oneline  --pretty=format:'%s' --since='yesterday' ${srcFiles}  | grep -o '#[0-9]*'||true`,
+        `git log origin  --oneline  --pretty=format:'%s' --since='last month' ${srcFiles}  | grep -o '#[0-9]*'||true`,
         { cwd: repoDir }
       )
         .toString()

@@ -13440,7 +13440,8 @@ const copyFiles = (repo, token) => {
         }
         (0, child_process_1.execSync)(`git clone https://x-access-token:${token}@github.com/${repo.full_name}.git ${repoDir}`);
         const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
-        const mergedPulls = repo.files ? (0, child_process_1.execSync)(`git log origin/master  --oneline  --pretty=format:'%s' --since='yesterday' ${srcFiles}  | grep -o '#[0-9]*'||true`, { cwd: repoDir })
+        core.info(`Diff files are ${srcFiles}`);
+        const mergedPulls = repo.files ? (0, child_process_1.execSync)(`git log origin  --oneline  --pretty=format:'%s' --since='last month' ${srcFiles}  | grep -o '#[0-9]*'||true`, { cwd: repoDir })
             .toString()
             .split("\n") : []; // ["#123", "#456"]
         core.info(`Related PRs are ${mergedPulls}`);
