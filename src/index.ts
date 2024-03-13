@@ -8,7 +8,7 @@ import { loadConfig } from "@/config";
 
 const TMP_DIR = "tmp";
 
-const copyFiles = (repo: Repository, token: string) => {
+const copyFiles = (repo: Repository,since:string, token: string) => {
   core.info(`Repo: ${repo.full_name}, Ref: ${repo.ref}`);
   try {
     const repoDir = path.join(TMP_DIR, repo.full_name);
@@ -21,7 +21,7 @@ const copyFiles = (repo: Repository, token: string) => {
     const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
     core.info(`Diff files are ${srcFiles}`)
     const mergedPulls = repo.files ? execSync(
-        `git log origin  --oneline  --pretty=format:'%s' --since='last month' ${srcFiles}  | grep -o '#[0-9]*'||true`,
+        `git log origin  --oneline  --pretty=format:'%s' --since='${since}' ${srcFiles}  | grep -o '#[0-9]*'||true`,
         { cwd: repoDir }
       )
         .toString()
@@ -63,7 +63,7 @@ const main = async () => {
     execSync(`git checkout -b ${config.workRef} ${baseBranch}`);
   }
 
-  const changeSummaries = config.repos.map((r) => {return {repo: r,pulls:copyFiles(r, config.token)}});
+  const changeSummaries = config.repos.map((r) => {return {repo: r,pulls:copyFiles(r,config.pr_search_range, config.token)}});
 
   try {
     execSync(`git config --local user.name ${config.username}`);

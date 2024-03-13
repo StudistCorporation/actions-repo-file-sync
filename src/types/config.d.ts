@@ -8,6 +8,7 @@ interface Config {
   teamReviewers: string[]
   workRef: string
   repos: Repository[]
+  pr_search_range: string
 }
 
 interface File {

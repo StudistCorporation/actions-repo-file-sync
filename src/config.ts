@@ -10,7 +10,8 @@ export const loadConfig = (): Config => {
     reviewers: fetchActionInput('reviewers').split(','),
     teamReviewers: fetchActionInput('team_reviewers').split(','),
     workRef: fetchActionInput('work_ref', 'repo-file-sync'),
-    repos: []
+    repos: [],
+    pr_search_range: fetchActionInput('pr_search_range'),
   }
 
   try {
