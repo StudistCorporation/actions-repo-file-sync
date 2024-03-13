@@ -18,8 +18,8 @@ const copyFiles = (repo: Repository, token: string) => {
     execSync(
       `git clone https://x-access-token:${token}@github.com/${repo.full_name}.git ${repoDir}`
     );
-      const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
-      const mergedPulls = repo.files ? execSync(
+    const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
+    const mergedPulls = repo.files ? execSync(
         `git log origin/master  --oneline  --pretty=format:'%s' --since='yesterday' ${srcFiles}  | grep -o '#[0-9]*'`,
         { cwd: repoDir }
       )
@@ -27,7 +27,7 @@ const copyFiles = (repo: Repository, token: string) => {
         .split("\n") : []; // ["#123", "#456"]
     core.info(`Related PRs are ${mergedPulls}`)
     repo.files?.forEach((file) => {
-      core.info(`Copying ${file.src} to ${file.dest}`);
+      core.info(`Copying ${file.src} to ${file.dest}.`);
       const src = path.join(repoDir, file.src);
       const dest = path.join(process.cwd(), file.dest);
       fs.cpSync(src, dest, { recursive: true });
