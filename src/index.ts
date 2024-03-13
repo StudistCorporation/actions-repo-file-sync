@@ -20,7 +20,7 @@ const copyFiles = (repo: Repository, token: string) => {
     );
     const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
     const mergedPulls = repo.files ? execSync(
-        `git log origin/master  --oneline  --pretty=format:'%s' --since='yesterday' ${srcFiles}  | grep -o '#[0-9]*'`,
+        `git log origin  --oneline  --pretty=format:'%s' --since='yesterday' ${srcFiles}  | grep -o '#[0-9]*'||true`,
         { cwd: repoDir }
       )
         .toString()
