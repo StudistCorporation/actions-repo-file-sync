@@ -25,6 +25,7 @@ const copyFiles = (repo: Repository, token: string) => {
       )
         .toString()
         .split("\n") : []; // ["#123", "#456"]
+    core.info(`Related PRs are ${mergedPulls}`)
     repo.files?.forEach((file) => {
       core.info(`Copying ${file.src} to ${file.dest}`);
       const src = path.join(repoDir, file.src);
