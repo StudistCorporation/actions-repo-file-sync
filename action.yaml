@@ -22,6 +22,11 @@ inputs:
   work_ref:
     required: false
     description : 'The `work_ref` to use in a branch for the pull request to be created.'
+  pr_search_range:
+    description: 'The `pr_search_rang` to use in the pull request comment to search related PRs with git log --since option'
+    required: false
+    default: 'yesterday'
+
 
 runs:
   using: node16

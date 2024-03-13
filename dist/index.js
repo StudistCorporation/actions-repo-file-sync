@@ -13343,7 +13343,8 @@ const loadConfig = () => {
         reviewers: fetchActionInput('reviewers').split(','),
         teamReviewers: fetchActionInput('team_reviewers').split(','),
         workRef: fetchActionInput('work_ref', 'repo-file-sync'),
-        repos: []
+        repos: [],
+        pr_search_range: fetchActionInput('pr_search_range'),
     };
     try {
         const yaml = loadConfigYaml();
@@ -13430,21 +13431,28 @@ const core = __importStar(__nccwpck_require__(2186));
 const child_process_1 = __nccwpck_require__(2081);
 const rest_1 = __nccwpck_require__(5375);
 const config_1 = __nccwpck_require__(6373);
-const TMP_DIR = 'tmp';
-const copyFiles = (repo, token) => {
+const TMP_DIR = "tmp";
+const copyFiles = (repo, since, token) => {
     core.info(`Repo: ${repo.full_name}, Ref: ${repo.ref}`);
     try {
         const repoDir = path_1.default.join(TMP_DIR, repo.full_name);
         if (fs_1.default.existsSync(repoDir)) {
             fs_1.default.rmSync(repoDir, { recursive: true });
         }
-        (0, child_process_1.execSync)(`git clone https://x-access-token:${token}@github.com/${repo.full_name}.git ${repoDir} --depth 1`);
-        repo.files?.forEach(file => {
-            core.info(`Copying ${file.src} to ${file.dest}`);
+        (0, child_process_1.execSync)(`git clone https://x-access-token:${token}@github.com/${repo.full_name}.git ${repoDir}`);
+        const srcFiles = repo.files ? `-- ${repo.files.map((f) => f.src).join(" ")}` : ""; // ="file1 file2 file3"
+        core.info(`Diff files are ${srcFiles}`);
+        const mergedPulls = repo.files ? (0, child_process_1.execSync)(`git log origin  --oneline  --pretty=format:'%s' --since='${since}' ${srcFiles}  | grep -o '#[0-9]*'||true`, { cwd: repoDir })
+            .toString()
+            .split("\n") : []; // ["#123", "#456"]
+        core.info(`Related PRs are ${mergedPulls}`);
+        repo.files?.forEach((file) => {
+            core.info(`Copying ${file.src} to ${file.dest}.`);
             const src = path_1.default.join(repoDir, file.src);
             const dest = path_1.default.join(process.cwd(), file.dest);
             fs_1.default.cpSync(src, dest, { recursive: true });
         });
+        return mergedPulls;
     }
     catch (error) {
         if (error instanceof Error) {
@@ -13455,8 +13463,10 @@ const copyFiles = (repo, token) => {
 const main = async () => {
     const config = await (0, config_1.loadConfig)();
     const octokit = new rest_1.Octokit({ auth: config.token });
-    const [owner, repo] = process.env.GITHUB_REPOSITORY?.split('/') ?? [];
-    const baseBranch = (0, child_process_1.execSync)('git rev-parse --abbrev-ref HEAD').toString().trim();
+    const [owner, repo] = process.env.GITHUB_REPOSITORY?.split("/") ?? [];
+    const baseBranch = (0, child_process_1.execSync)("git rev-parse --abbrev-ref HEAD")
+        .toString()
+        .trim();
     if (!fs_1.default.existsSync(TMP_DIR)) {
         fs_1.default.mkdirSync(TMP_DIR);
     }
@@ -13470,31 +13480,38 @@ const main = async () => {
         }
         (0, child_process_1.execSync)(`git checkout -b ${config.workRef} ${baseBranch}`);
     }
-    config.repos.forEach(async (r) => copyFiles(r, config.token));
+    const changeSummaries = config.repos.map((r) => { return { repo: r, pulls: copyFiles(r, config.pr_search_range, config.token) }; });
     try {
         (0, child_process_1.execSync)(`git config --local user.name ${config.username}`);
         (0, child_process_1.execSync)(`git config --local user.email ${config.email}`);
-        (0, child_process_1.execSync)('git add -N .');
-        if ((0, child_process_1.execSync)('git diff --name-only').toString().trim() !== '') {
-            core.info('Committing');
-            (0, child_process_1.execSync)('git add .');
+        (0, child_process_1.execSync)("git add -N .");
+        if ((0, child_process_1.execSync)("git diff --name-only").toString().trim() !== "") {
+            core.info("Committing");
+            (0, child_process_1.execSync)("git add .");
             (0, child_process_1.execSync)('git commit -m "[repo-file-sync] Synchronize files"');
             (0, child_process_1.execSync)(`git push origin ${config.workRef}`);
             const pulls = await octokit.pulls.list({
                 owner: owner,
                 repo: repo,
-                state: 'open',
+                state: "open",
                 head: `${owner}:${config.workRef}`,
             });
             if (pulls.data.length === 0) {
+                const summary = changeSummaries.find(f => f.repo.name == repo && f.repo.owner === owner);
+                const prLinks = summary?.pulls?.map(pr => `${summary.repo.full_name}${pr}`); // "owner/repo#123"[]
                 const pull = await octokit.pulls.create({
                     owner: owner,
                     repo: repo,
-                    title: '[repo-file-sync] Synchronize files',
+                    title: "[repo-file-sync] Synchronize files",
                     head: config.workRef,
                     base: baseBranch,
+                    body: `
+          # Related PRs
+          ${prLinks?.map(l => `- ${l}`).join("\n")}
+          `
                 });
-                if (config.reviewers.length !== 0 || config.teamReviewers.length !== 0) {
+                if (config.reviewers.length !== 0 ||
+                    config.teamReviewers.length !== 0) {
                     await octokit.pulls.requestReviewers({
                         owner: owner,
                         repo: repo,
