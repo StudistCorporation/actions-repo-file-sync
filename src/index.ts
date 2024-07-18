@@ -64,7 +64,8 @@ const main = async () => {
   }
 
   const changeSummaries = config.repos.map((r) => {
-    console.log(r)
+    core.info(r.ref??"")
+    core.info(r.full_name)
     return {repo: r,pulls:copyFiles(r,config.pr_search_range, config.token)}
   });
 
