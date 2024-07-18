@@ -1,6 +1,6 @@
-type ConfigYaml = { [key: string]: string[] }
+export type ConfigYaml = { [key: string]: string[] }
 
-interface Config {
+export interface Config {
   token: string
   username: string
   email: string
@@ -11,12 +11,12 @@ interface Config {
   pr_search_range: string
 }
 
-interface File {
+export interface File {
   src: string
   dest: string
 }
 
-interface Repository {
+export interface Repository {
   owner: string
   name: string
   full_name: string

@@ -1,28 +1,24 @@
 {
   "name": "actions-repo-file-sync",
-  "main": "dist/index.js",
-  "private": true,
+  "version": "1.0.0",
+  "description": "This action will synchronizes files from the specified repository and creates a Pull Request with generated GitHub App token.",
+  "main": "index.js",
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.3"
+  },
   "scripts": {
-    "build": "ncc build src/index.ts -o dist/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npm run build:live",
+    "build": "tsc -p .",
+    "build:live": "nodemon --watch 'src/**/*.ts' --exec \"ts-node\" src/index.ts"
   },
   "keywords": [],
-  "author": "Studist Corporation",
-  "license": "MIT",
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@actions/core": "^1.10.0",
-    "@actions/github": "^5.1.1",
-    "@octokit/rest": "^19.0.5",
-    "@vercel/ncc": "^0.34.0",
+    "@actions/core": "^1.10.1",
+    "@octokit/rest": "^21.0.1",
+    "@types/js-yaml": "^4.0.9",
     "js-yaml": "^4.1.0"
-  },
-  "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
-    "@types/js-yaml": "^4.0.5",
-    "@types/node": "^16.11.4",
-    "typescript": "^4.4.4"
-  },
-  "engines": {
-    "node": "^20"
   }
 }

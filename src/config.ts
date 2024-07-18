@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { load } from 'js-yaml';
+import { load } from "js-yaml";
+import { Config,Repository, ConfigYaml } from './types/config';
 
 export const loadConfig = (): Config => {
   let config: Config = {
@@ -28,7 +29,7 @@ export const loadConfig = (): Config => {
         files: [],
       }
 
-      yaml[key].forEach(file => {
+      yaml[key].forEach((file) => {
         repo.files?.push({
           src: file,
           dest: file,
