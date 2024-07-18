@@ -63,7 +63,10 @@ const main = async () => {
     execSync(`git checkout -b ${config.workRef} ${baseBranch}`);
   }
 
-  const changeSummaries = config.repos.map((r) => {return {repo: r,pulls:copyFiles(r,config.pr_search_range, config.token)}});
+  const changeSummaries = config.repos.map((r) => {
+    console.log(r)
+    return {repo: r,pulls:copyFiles(r,config.pr_search_range, config.token)}
+  });
 
   try {
     execSync(`git config --local user.name ${config.username}`);
