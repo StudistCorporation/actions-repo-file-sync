@@ -4,7 +4,8 @@ import * as core from "@actions/core";
 import { execSync } from "child_process";
 import { Octokit } from "@octokit/rest";
 
-import { loadConfig } from "@/config";
+import { loadConfig } from "./config";
+import { Repository } from "./types/config";
 
 const TMP_DIR = "tmp";
 
