@@ -47,6 +47,7 @@ steps:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Sync files
         uses: ./.github/actions/sync-files
