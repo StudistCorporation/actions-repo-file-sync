@@ -57,7 +57,7 @@ sources:
 
 このツールは GitHub Action として簡単に使用できます：
 
-#### 基本的な使い方
+#### 基本的な使い方（手動コミット）
 
 ```yaml
 # .github/workflows/sync-files.yml
@@ -90,10 +90,42 @@ jobs:
           git push
 ```
 
-#### 高度な使い方
+#### PR自動作成（推奨）
 
 ```yaml
-name: Advanced File Sync
+# .github/workflows/sync-files-pr.yml
+name: Sync Repository Files with PR
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 毎日実行
+  workflow_dispatch:      # 手動実行も可能
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync files and create PR
+        uses: StudistCorporation/actions-repo-file-sync@main
+        with:
+          config: '.github/repo-file-sync.yaml'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          create-pr: true
+          pr-title: '🔄 Sync files from repositories'
+          pr-body: |
+            Automated file sync from configured repositories.
+            
+            Files have been updated based on the latest versions from source repositories.
+          branch-name: 'sync/repo-files'
+```
+
+#### 高度な使い方（カスタマイズ可能なPR作成）
+
+```yaml
+name: Advanced File Sync with Custom PR
 
 on:
   workflow_dispatch:
@@ -103,6 +135,16 @@ on:
         required: false
         default: false
         type: boolean
+      create-pr:
+        description: 'Create pull request'
+        required: false
+        default: true
+        type: boolean
+      branch-name:
+        description: 'Branch name for PR'
+        required: false
+        default: 'sync/repo-files'
+        type: string
 
 jobs:
   sync:
@@ -116,6 +158,15 @@ jobs:
           config: '.github/custom-sync-config.yaml'
           github-token: ${{ secrets.PAT_TOKEN }}  # カスタムトークン
           dry-run: ${{ github.event.inputs.dry-run }}
+          create-pr: ${{ github.event.inputs.create-pr }}
+          pr-title: '🔄 Custom sync: ${{ github.event.inputs.branch-name }}'
+          pr-body: |
+            Automated file sync triggered manually.
+            
+            - Branch: ${{ github.event.inputs.branch-name }}
+            - Dry run: ${{ github.event.inputs.dry-run }}
+            - Triggered by: @${{ github.actor }}
+          branch-name: ${{ github.event.inputs.branch-name }}
         id: sync
 
       - name: Show sync results
@@ -130,6 +181,10 @@ jobs:
 | `config` | 設定ファイルのパス | No | `.github/repo-file-sync.yaml` |
 | `github-token` | GitHubトークン | No | `${{ github.token }}` |
 | `dry-run` | ドライランモード | No | `false` |
+| `create-pr` | プルリクエストを作成する | No | `false` |
+| `pr-title` | プルリクエストのタイトル | No | `🔄 Sync files from repositories` |
+| `pr-body` | プルリクエストの説明文 | No | `Automated file sync from configured repositories` |
+| `branch-name` | プルリクエスト用のブランチ名 | No | `sync/repo-files` |
 
 #### 出力パラメータ
 
@@ -174,6 +229,12 @@ uv run python -m src.cli --preserve-structure
 
 # 接続テスト
 uv run python -m src.cli --test-connection
+
+# プルリクエストを作成
+uv run python -m src.cli --create-pr
+
+# カスタムPRタイトルとブランチ名
+uv run python -m src.cli --create-pr --pr-title "Custom sync" --branch-name "feature/sync"
 
 # タイムアウトを設定（秒）
 uv run python -m src.cli --timeout 60
