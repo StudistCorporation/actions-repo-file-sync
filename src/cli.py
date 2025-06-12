@@ -5,11 +5,10 @@ This module provides the CLI commands and options for the file synchronization t
 
 from __future__ import annotations
 
+import argparse
 import logging
 import sys
 from pathlib import Path
-
-import click
 
 from .config import load_config
 from .sync import RepoFileSync
@@ -31,108 +30,103 @@ def setup_logging(verbose: bool = False) -> None:
     )
 
 
-@click.command()
-@click.option(
-    "--config", 
-    "-c",
-    type=click.Path(exists=True, path_type=Path),
-    default=Path(".github/repo-file-sync.yaml"),
-    help="Path to the configuration YAML file",
-    show_default=True,
-)
-@click.option(
-    "--output", 
-    "-o",
-    type=click.Path(path_type=Path),
-    default=Path("./synced-files"),
-    help="Output directory for downloaded files",
-    show_default=True,
-)
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Show what would be downloaded without actually downloading",
-)
-@click.option(
-    "--preserve-structure", 
-    is_flag=True,
-    help="Preserve repository directory structure (default: save all files in output directory)",
-)
-@click.option(
-    "--timeout",
-    type=int,
-    default=30,
-    help="Request timeout in seconds",
-    show_default=True,
-)
-@click.option(
-    "--verbose", 
-    "-v",
-    is_flag=True,
-    help="Enable verbose logging",
-)
-@click.option(
-    "--test-connection",
-    is_flag=True,
-    help="Test GitHub connectivity and exit",
-)
-def main(
-    config: Path,
-    output: Path,
-    dry_run: bool,
-    preserve_structure: bool,
-    timeout: int,
-    verbose: bool,
-    test_connection: bool,
-) -> None:
-    """Synchronize files from GitHub repositories based on YAML configuration.
+def create_parser() -> argparse.ArgumentParser:
+    """Create and configure the argument parser.
     
-    This tool reads a YAML configuration file that specifies GitHub repositories,
-    git references, and file paths to download. It then fetches these files and
-    saves them to a local directory.
-    
-    The configuration file should have this structure:
-    
-    \b
-    sources:
-      - repo: owner/repository
-        ref: main
-        files:
-          - path/to/file.txt
-          - another/file.md
-    
-    Examples:
-    
-    \b
-    # Download files using default config
-    python -m src.cli
-    
-    \b
-    # Use custom config and output directory
-    python -m src.cli -c my-config.yaml -o ./downloads
-    
-    \b
-    # Dry run to see what would be downloaded
-    python -m src.cli --dry-run
-    
-    \b
-    # Preserve repository directory structure
-    python -m src.cli --preserve-structure
+    Returns:
+        Configured ArgumentParser instance
     """
-    setup_logging(verbose)
+    parser = argparse.ArgumentParser(
+        description="Synchronize files from GitHub repositories based on YAML configuration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Download files using default config
+  python main.py
+
+  # Use custom config and output directory
+  python main.py -c my-config.yaml -o ./downloads
+
+  # Dry run to see what would be downloaded
+  python main.py --dry-run
+
+  # Preserve repository directory structure
+  python main.py --preserve-structure
+        """.strip()
+    )
+    
+    parser.add_argument(
+        "-c", "--config",
+        type=Path,
+        default=Path(".github/repo-file-sync.yaml"),
+        help="Path to the configuration YAML file (default: .github/repo-file-sync.yaml)"
+    )
+    
+    parser.add_argument(
+        "-o", "--output",
+        type=Path,
+        default=Path("./synced-files"),
+        help="Output directory for downloaded files (default: ./synced-files)"
+    )
+    
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be downloaded without actually downloading"
+    )
+    
+    parser.add_argument(
+        "--preserve-structure",
+        action="store_true",
+        help="Preserve repository directory structure (default: save all files in output directory)"
+    )
+    
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="Request timeout in seconds (default: 30)"
+    )
+    
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    parser.add_argument(
+        "--test-connection",
+        action="store_true",
+        help="Test GitHub connectivity and exit"
+    )
+    
+    return parser
+
+
+def main() -> None:
+    """Main entry point for the CLI application."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    setup_logging(args.verbose)
     logger = logging.getLogger(__name__)
+    
+    # Validate config file exists if not testing connection
+    if not args.test_connection and not args.config.exists():
+        logger.error(f"Configuration file not found: {args.config}")
+        sys.exit(1)
     
     try:
         # Test connection if requested
-        if test_connection:
-            with RepoFileSync(timeout=timeout) as sync:
+        if args.test_connection:
+            with RepoFileSync(timeout=args.timeout) as sync:
                 is_connected = sync.test_connectivity()
                 sys.exit(0 if is_connected else 1)
         
         # Load and validate configuration
-        logger.info(f"Loading configuration from {config}")
+        logger.info(f"Loading configuration from {args.config}")
         try:
-            config_data = load_config(config)
+            config_data = load_config(args.config)
         except Exception as e:
             logger.error(f"Failed to load configuration: {e}")
             sys.exit(1)
@@ -145,19 +139,19 @@ def main(
         )
         
         # Perform synchronization
-        with RepoFileSync(timeout=timeout) as sync:
+        with RepoFileSync(timeout=args.timeout) as sync:
             result = sync.sync(
                 config_data,
-                output,
-                dry_run=dry_run,
-                preserve_structure=preserve_structure,
+                args.output,
+                dry_run=args.dry_run,
+                preserve_structure=args.preserve_structure,
             )
         
         # Report results
         if result.is_success:
             logger.info(f"✓ Sync completed successfully: {result}")
-            if not dry_run:
-                logger.info(f"Files saved to: {output.absolute()}")
+            if not args.dry_run:
+                logger.info(f"Files saved to: {args.output.absolute()}")
         else:
             logger.error(f"✗ Sync completed with errors: {result}")
             
@@ -173,7 +167,7 @@ def main(
         sys.exit(130)
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        if verbose:
+        if args.verbose:
             logger.exception("Full traceback:")
         sys.exit(1)
 
