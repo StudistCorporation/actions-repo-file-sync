@@ -343,18 +343,11 @@ class GitHubClient:
             logger.error(f"Failed to parse pull request response: {e}")
             return None
 
-    def setup_git_and_push(
-        self,
-        branch_name: str,
-        commit_message: str,
-        files_to_add: list[str],
-    ) -> bool:
-        """Set up git configuration and push changes to a new branch.
+    def create_branch(self, branch_name: str) -> bool:
+        """Create and checkout a new git branch.
 
         Args:
-            branch_name: Name of the branch to create and push to
-            commit_message: Commit message for the changes
-            files_to_add: List of file paths to add to the commit
+            branch_name: Name of the branch to create
 
         Returns:
             True if successful, False otherwise
@@ -379,6 +372,30 @@ class GitHubClient:
                 capture_output=True,
             )
 
+            logger.info(f"Successfully created and checked out branch: {branch_name}")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to create branch {branch_name}: {e}")
+            return False
+
+    def add_files_and_push(
+        self,
+        branch_name: str,
+        commit_message: str,
+        files_to_add: list[str],
+    ) -> bool:
+        """Add files to git and push to remote branch.
+
+        Args:
+            branch_name: Name of the branch to push to
+            commit_message: Commit message for the changes
+            files_to_add: List of file paths to add to the commit
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
             # Add files
             for file_path in files_to_add:
                 subprocess.run(
@@ -395,25 +412,48 @@ class GitHubClient:
 
             if result.returncode == 0:
                 logger.info("No changes to commit")
-                return False
+                return True  # Return True even if no changes to allow PR creation workflow to continue
+            else:
+                # Commit changes
+                subprocess.run(
+                    ["git", "commit", "-m", commit_message],
+                    check=True,
+                    capture_output=True,
+                )
 
-            # Commit changes
-            subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                check=True,
-                capture_output=True,
-            )
+                # Push to remote
+                subprocess.run(
+                    ["git", "push", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
 
-            # Push to remote
-            subprocess.run(
-                ["git", "push", "origin", branch_name],
-                check=True,
-                capture_output=True,
-            )
-
-            logger.info(f"Successfully pushed branch: {branch_name}")
+            logger.info(f"Successfully pushed files to branch: {branch_name}")
             return True
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Git operation failed: {e}")
+            logger.error(f"Failed to add files and push to {branch_name}: {e}")
             return False
+
+    def setup_git_and_push(
+        self,
+        branch_name: str,
+        commit_message: str,
+        files_to_add: list[str],
+    ) -> bool:
+        """Set up git configuration and push changes to a new branch.
+
+        Args:
+            branch_name: Name of the branch to create and push to
+            commit_message: Commit message for the changes
+            files_to_add: List of file paths to add to the commit
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Create branch
+        if not self.create_branch(branch_name):
+            return False
+        
+        # Add files and push
+        return self.add_files_and_push(branch_name, commit_message, files_to_add)
