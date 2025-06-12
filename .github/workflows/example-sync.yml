@@ -2,8 +2,7 @@
 name: Example File Sync with PR
 
 on:
-  schedule:
-    - cron: '0 2 * * 1'  # Every Monday at 2 AM
+  push:
   workflow_dispatch:
     inputs:
       dry-run:
