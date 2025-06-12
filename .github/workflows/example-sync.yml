@@ -32,8 +32,8 @@ jobs:
         with:
           config: '.github/repo-file-sync.yaml'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          dry-run: ${{ 'false' }}
-          create-pr: ${{ 'true' }}
+          dry-run: false
+          create-pr: true
           pr-title: '🔄 Weekly sync: Update shared files'
           pr-body: |
             ## 📁 Automated File Sync
