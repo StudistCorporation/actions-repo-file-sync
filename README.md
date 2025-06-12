@@ -121,8 +121,6 @@ jobs:
       - name: Show sync results
         run: |
           echo "Files synced: ${{ steps.sync.outputs.files-synced }}"
-          echo "Files failed: ${{ steps.sync.outputs.files-failed }}"
-          echo "Total bytes: ${{ steps.sync.outputs.total-bytes }}"
 ```
 
 #### 入力パラメータ
@@ -137,9 +135,7 @@ jobs:
 
 | パラメータ | 説明 |
 |-----------|------|
-| `files-synced` | 成功したファイル数 |
-| `files-failed` | 失敗したファイル数 |
-| `total-bytes` | ダウンロード総バイト数 |
+| `files-synced` | 同期されたファイル一覧（形式: `repo:file,repo:file`） |
 
 ### コマンドラインツールとして使用
 

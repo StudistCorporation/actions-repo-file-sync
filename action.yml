@@ -24,13 +24,7 @@ inputs:
 
 outputs:
   files-synced:
-    description: 'Number of files successfully synced'
-  
-  files-failed:
-    description: 'Number of files that failed to sync'
-  
-  total-bytes:
-    description: 'Total bytes downloaded'
+    description: 'List of synced files in format: repo:file,repo:file'
 
 runs:
   using: 'docker'

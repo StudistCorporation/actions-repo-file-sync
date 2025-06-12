@@ -88,32 +88,27 @@ else
     exit ${exit_code}
 fi
 
-# Extract metrics from output (if available)
-files_synced=0
-files_failed=0
-total_bytes=0
+# Extract synced files from output
+files_synced=""
 
-# Try to parse sync results from the output
-if [[ "${output}" =~ ([0-9]+)\ successful ]]; then
-    files_synced="${BASH_REMATCH[1]}"
-fi
+# Parse sync results to extract repo:file pairs
+# Look for lines like "✓ Downloaded owner/repo:ref:file -> path"
+while IFS= read -r line; do
+    if [[ "${line}" =~ ✓\ Downloaded\ ([^:]+):([^:]+):([^\ ]+) ]]; then
+        repo="${BASH_REMATCH[1]}"
+        file="${BASH_REMATCH[3]}"
+        if [[ -n "${files_synced}" ]]; then
+            files_synced="${files_synced},${repo}:${file}"
+        else
+            files_synced="${repo}:${file}"
+        fi
+    fi
+done <<< "${output}"
 
-if [[ "${output}" =~ ([0-9]+)\ failed ]]; then
-    files_failed="${BASH_REMATCH[1]}"
-fi
-
-if [[ "${output}" =~ ([0-9]+)\ bytes ]]; then
-    total_bytes="${BASH_REMATCH[1]}"
-fi
-
-# Set GitHub Actions outputs
+# Set GitHub Actions output
 github_output "files-synced" "${files_synced}"
-github_output "files-failed" "${files_failed}"
-github_output "total-bytes" "${total_bytes}"
 
 log "Files synced: ${files_synced}"
-log "Files failed: ${files_failed}"
-log "Total bytes: ${total_bytes}"
 
 # Show the actual output
 echo "${output}"

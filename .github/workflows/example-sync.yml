@@ -28,8 +28,6 @@ jobs:
         run: |
           echo "📊 Sync Results:"
           echo "✅ Files synced: ${{ steps.file-sync.outputs.files-synced }}"
-          echo "❌ Files failed: ${{ steps.file-sync.outputs.files-failed }}"
-          echo "📦 Total bytes downloaded: ${{ steps.file-sync.outputs.total-bytes }}"
 
       - name: Check for changes
         id: verify-changed-files
@@ -46,16 +44,13 @@ jobs:
         run: |
           echo "## 📋 File Sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Files synced | ${{ steps.file-sync.outputs.files-synced }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Files failed | ${{ steps.file-sync.outputs.files-failed }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Total bytes | ${{ steps.file-sync.outputs.total-bytes }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Changes committed | ${{ steps.verify-changed-files.outputs.changed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "**Files synced:** ${{ steps.file-sync.outputs.files-synced }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changes committed:** ${{ steps.verify-changed-files.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ steps.file-sync.outputs.files-failed }}" -gt 0 ]; then
-            echo "⚠️ Some files failed to sync. Check the logs for details." >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.file-sync.outputs.files-synced }}" ]; then
+            echo "✅ Files synced successfully!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "✅ All files synced successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ No files were synced." >> $GITHUB_STEP_SUMMARY
           fi
