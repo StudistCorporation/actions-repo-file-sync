@@ -396,6 +396,15 @@ class GitHubClient:
                 logger.error(f"Workspace directory {workspace_dir} does not exist")
                 return False
             
+            # Configure git safe directory first
+            logger.debug("Adding git safe directory")
+            subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", workspace_dir],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            
             # Configure git user
             logger.debug("Configuring git user")
             subprocess.run(
