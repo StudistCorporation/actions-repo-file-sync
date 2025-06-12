@@ -62,7 +62,7 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 
 # Build command
-CMD=(python -m src.cli)
+CMD=(uv run python -m src.cli)
 CMD+=("--config" "${CONFIG_FILE}")
 CMD+=("--output" "${OUTPUT_DIR}")
 
@@ -74,7 +74,7 @@ fi
 log "Executing: ${CMD[*]}"
 
 # Capture stdout and stderr
-if output=$(python -m src.cli \
+if output=$(uv run python -m src.cli \
     --config "${CONFIG_FILE}" \
     --output "${OUTPUT_DIR}" \
     ${DRY_RUN} 2>&1); then

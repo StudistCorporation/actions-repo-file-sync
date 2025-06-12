@@ -24,7 +24,7 @@ COPY src/ ./src/
 COPY entrypoint.sh ./
 
 # Install Python dependencies
-RUN uv pip install --system --no-cache-dir -e .
+RUN uv sync --frozen --no-dev
 
 # Ensure entrypoint script is executable
 RUN chmod +x entrypoint.sh
@@ -33,5 +33,5 @@ RUN chmod +x entrypoint.sh
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Use entrypoint script
+# Use entrypoint script with uv run
 ENTRYPOINT ["/app/entrypoint.sh"]
