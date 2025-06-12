@@ -152,11 +152,12 @@ Edge cases:
 
         # Sync files using real GitHub API
         token = os.getenv("GITHUB_TOKEN")
-        
+
         output_dir = tmp_path / "real_sync"
         output_dir.mkdir()
 
         from src.sync import RepoFileSync
+
         with RepoFileSync(github_token=token) as sync:
             sync.sync(config, output_dir)
 
