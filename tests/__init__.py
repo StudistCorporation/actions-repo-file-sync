@@ -1,0 +1,1 @@
+"""Tests for actions-repo-file-sync tool."""
