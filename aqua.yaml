@@ -1,0 +1,6 @@
+---
+registries:
+- type: standard
+  ref: v4.219.0 # renovate: depName=aquaproj/aqua-registry
+packages:
+- name: astral-sh/uv@0.7.3
