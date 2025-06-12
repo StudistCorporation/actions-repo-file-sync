@@ -81,14 +81,16 @@ class RepoFileSync:
         self,
         github_client: Optional[GitHubClient] = None,
         timeout: int = 30,
+        github_token: Optional[str] = None,
     ):
         """Initialize the file synchronizer.
 
         Args:
             github_client: Optional GitHub client instance
             timeout: Request timeout in seconds
+            github_token: Optional GitHub token for private repository access
         """
-        self.github_client = github_client or GitHubClient(timeout=timeout)
+        self.github_client = github_client or GitHubClient(timeout=timeout, token=github_token)
         self._owns_client = github_client is None
 
     def sync(
