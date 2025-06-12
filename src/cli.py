@@ -266,14 +266,14 @@ def main() -> None:
                 logger.info(f"Files saved to: {args.output.absolute()}")
                 
                 # Create pull request if requested
-                if args.create_pr and result.synced_files:
+                if args.create_pr and result.successful_files:
                     logger.info("Creating pull request...")
                     pr_created = create_pull_request(
                         args.output,
                         args.branch_name,
                         args.pr_title,
                         args.pr_body,
-                        result.synced_files,
+                        result.successful_files,
                         args.timeout,
                     )
                     if not pr_created:
