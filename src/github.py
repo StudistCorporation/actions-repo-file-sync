@@ -367,7 +367,34 @@ class GitHubClient:
             workspace_dir = os.getenv("GITHUB_WORKSPACE", "/github/workspace")
             original_cwd = os.getcwd()
             logger.debug(f"Changing directory from {original_cwd} to {workspace_dir}")
-            os.chdir(workspace_dir)
+            
+            # Debug: Check directory contents and git status
+            logger.debug(f"Current directory contents: {os.listdir('.')}")
+            if os.path.exists(workspace_dir):
+                logger.debug(f"Workspace directory contents: {os.listdir(workspace_dir)}")
+                os.chdir(workspace_dir)
+                logger.debug(f"After chdir, current directory: {os.getcwd()}")
+                logger.debug(f"Directory contents: {os.listdir('.')}")
+                
+                # Check if .git exists
+                if os.path.exists(".git"):
+                    logger.debug(".git directory exists")
+                else:
+                    logger.error(".git directory does NOT exist")
+                    
+                # Try to get git status for debugging
+                try:
+                    result = subprocess.run(["git", "status"], capture_output=True, text=True)
+                    logger.debug(f"Git status result: {result.returncode}")
+                    if result.stdout:
+                        logger.debug(f"Git status stdout: {result.stdout}")
+                    if result.stderr:
+                        logger.debug(f"Git status stderr: {result.stderr}")
+                except Exception as e:
+                    logger.debug(f"Git status failed: {e}")
+            else:
+                logger.error(f"Workspace directory {workspace_dir} does not exist")
+                return False
             
             # Configure git user
             logger.debug("Configuring git user")
