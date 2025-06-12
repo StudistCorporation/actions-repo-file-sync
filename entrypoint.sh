@@ -92,9 +92,20 @@ fi
 files_synced=""
 
 # Parse sync results to extract repo:file pairs
-# Look for lines like "✓ Downloaded owner/repo:ref:file -> path"
+# Look for lines like "✓ Downloaded owner/repo:ref:file -> path" (normal mode)
+# or "Would download owner/repo:ref:file" (dry-run mode)
 while IFS= read -r line; do
     if [[ "${line}" =~ ✓\ Downloaded\ ([^:]+):([^:]+):([^\ ]+) ]]; then
+        # Normal mode: actual download
+        repo="${BASH_REMATCH[1]}"
+        file="${BASH_REMATCH[3]}"
+        if [[ -n "${files_synced}" ]]; then
+            files_synced="${files_synced},${repo}:${file}"
+        else
+            files_synced="${repo}:${file}"
+        fi
+    elif [[ "${line}" =~ Would\ download\ ([^:]+):([^:]+):([^\ ]+) ]]; then
+        # Dry-run mode: would download
         repo="${BASH_REMATCH[1]}"
         file="${BASH_REMATCH[3]}"
         if [[ -n "${files_synced}" ]]; then
