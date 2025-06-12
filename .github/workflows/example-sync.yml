@@ -20,6 +20,9 @@ jobs:
   sync-files:
     runs-on: ubuntu-latest
     name: Sync repository files and create PR
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
