@@ -12,7 +12,7 @@ __version__ = "2.0.0"
 
 __all__ = [
     "Config",
-    "SourceConfig", 
+    "SourceConfig",
     "load_config",
     "GitHubClient",
     "RepoFileSync",
