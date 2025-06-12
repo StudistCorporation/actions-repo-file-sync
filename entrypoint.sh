@@ -102,22 +102,26 @@ if [[ -n "${CREATE_PR}" ]]; then
 fi
 
 if [[ -n "${PR_TITLE}" ]]; then
-    CMD+=("${PR_TITLE}" "${INPUT_PR_TITLE}")
+    CMD+=("${PR_TITLE}")
+    CMD+=("${INPUT_PR_TITLE}")
 fi
 
 if [[ -n "${PR_BODY}" ]]; then
-    CMD+=("${PR_BODY}" "${INPUT_PR_BODY}")
+    CMD+=("${PR_BODY}")
+    CMD+=("${INPUT_PR_BODY}")
 fi
 
 if [[ -n "${BRANCH_NAME}" ]]; then
-    CMD+=("${BRANCH_NAME}" "${INPUT_BRANCH_NAME}")
+    CMD+=("${BRANCH_NAME}")
+    CMD+=("${INPUT_BRANCH_NAME}")
 fi
 
 # Run the sync command and capture output
-log "Executing: ${CMD[*]}"
+log "Executing command with ${#CMD[@]} arguments"
+log "PR creation: ${CREATE_PR:-disabled}"
 
 # Capture stdout and stderr
-if output=$(${CMD[@]} 2>&1); then
+if output=$("${CMD[@]}" 2>&1); then
     
     log "Sync completed successfully"
     exit_code=0
