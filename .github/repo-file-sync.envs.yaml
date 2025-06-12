@@ -1,8 +1,2 @@
-- name: actions/checkout
-  value: awesome-checkout-action
-- name: Checkout V4
-  value: Super Checkout V5
-- name: EXTERNAL_VAR
-  value: from-external-file
-- name: PROJECT_NAME
-  value: "Awesome Project"
+- name: Repo File Sync
+  value: Hello Repo File Sync
