@@ -362,6 +362,13 @@ class GitHubClient:
         try:
             logger.info(f"Setting up git and pushing branch: {branch_name}")
             
+            # Change to GitHub workspace directory (where the git repository is)
+            import os
+            workspace_dir = os.getenv("GITHUB_WORKSPACE", "/github/workspace")
+            original_cwd = os.getcwd()
+            logger.debug(f"Changing directory from {original_cwd} to {workspace_dir}")
+            os.chdir(workspace_dir)
+            
             # Configure git user
             logger.debug("Configuring git user")
             subprocess.run(
@@ -466,3 +473,10 @@ class GitHubClient:
             if e.stdout:
                 logger.debug(f"Git stdout: {e.stdout.decode() if isinstance(e.stdout, bytes) else e.stdout}")
             return False
+        finally:
+            # Restore original working directory
+            try:
+                os.chdir(original_cwd)
+                logger.debug(f"Restored working directory to {original_cwd}")
+            except:
+                pass  # Don't fail if we can't restore directory
