@@ -9,6 +9,10 @@ from src.cli import main
 
 def main_with_env_parsing() -> None:
     """Main entry point that handles GitHub Actions environment variables."""
+    # Debug: Print environment variables
+    print(f"DEBUG: INPUT_CREATE_PR = {os.getenv('INPUT_CREATE_PR', 'NOT_SET')}")
+    print(f"DEBUG: INPUT_DRY_RUN = {os.getenv('INPUT_DRY_RUN', 'NOT_SET')}")
+    
     # Parse GitHub Actions environment variables
     if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
         os.environ.setdefault("CREATE_PR", "true")
@@ -40,6 +44,9 @@ def main_with_env_parsing() -> None:
     
     if os.getenv("INPUT_DRY_RUN", "false").lower() == "true":
         sys.argv.append("--dry-run")
+    
+    # Debug: Print final sys.argv
+    print(f"DEBUG: Final sys.argv = {sys.argv}")
     
     main()
 

@@ -236,6 +236,10 @@ def main() -> None:
             if not args.dry_run:
                 logger.info(f"Files saved to: {args.output.absolute()}")
                 
+                # Debug: Log the create_pr value
+                logger.info(f"DEBUG: args.create_pr = {args.create_pr}, type = {type(args.create_pr)}")
+                logger.info(f"DEBUG: args.dry_run = {args.dry_run}")
+                
                 # Create pull request if requested
                 if args.create_pr:
                     logger.info("Creating pull request...")
