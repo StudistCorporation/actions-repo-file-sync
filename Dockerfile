@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 # Copy project files
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 COPY src/ ./src/
 COPY entrypoint.sh ./
 
