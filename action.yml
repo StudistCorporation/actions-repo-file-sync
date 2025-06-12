@@ -1,0 +1,41 @@
+name: 'Repo File Sync'
+description: 'Synchronize files from GitHub repositories with environment variable substitution'
+author: 'Studist Corporation'
+
+branding:
+  icon: 'download'
+  color: 'blue'
+
+inputs:
+  config:
+    description: 'Path to the configuration YAML file'
+    required: false
+    default: '.github/repo-file-sync.yaml'
+  
+  github-token:
+    description: 'GitHub token for private repository access'
+    required: false
+    default: ${{ github.token }}
+  
+  dry-run:
+    description: 'Show what would be downloaded without actually downloading'
+    required: false
+    default: 'false'
+
+outputs:
+  files-synced:
+    description: 'Number of files successfully synced'
+  
+  files-failed:
+    description: 'Number of files that failed to sync'
+  
+  total-bytes:
+    description: 'Total bytes downloaded'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    GITHUB_TOKEN: ${{ inputs.github-token }}
+    INPUT_CONFIG: ${{ inputs.config }}
+    INPUT_DRY_RUN: ${{ inputs.dry-run }}

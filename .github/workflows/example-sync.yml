@@ -1,0 +1,87 @@
+# Example workflow for using repo-file-sync action
+name: Example File Sync
+
+on:
+  # Run on schedule (daily at midnight UTC)
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (no actual file changes)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync-files:
+    runs-on: ubuntu-latest
+    name: Sync repository files
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync files from configured repositories
+        uses: ./  # Use the local action for testing
+        # In real usage, use: StudistCorporation/actions-repo-file-sync@main
+        with:
+          config: '.github/repo-file-sync.yaml'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+        id: file-sync
+
+      - name: Display sync results
+        run: |
+          echo "📊 Sync Results:"
+          echo "✅ Files synced: ${{ steps.file-sync.outputs.files-synced }}"
+          echo "❌ Files failed: ${{ steps.file-sync.outputs.files-failed }}"
+          echo "📦 Total bytes downloaded: ${{ steps.file-sync.outputs.total-bytes }}"
+
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+            echo "📝 Changes detected in synced files"
+          else
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            echo "✨ No changes in synced files"
+          fi
+
+      - name: Commit and push changes
+        if: steps.verify-changed-files.outputs.changed == 'true' && github.event.inputs.dry-run != 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add ./synced-files
+          git commit -m "🔄 Sync files from repositories
+          
+          Files synced: ${{ steps.file-sync.outputs.files-synced }}
+          Files failed: ${{ steps.file-sync.outputs.files-failed }}
+          Total bytes: ${{ steps.file-sync.outputs.total-bytes }}"
+          
+          git push
+
+      - name: Create summary
+        run: |
+          echo "## 📋 File Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Files synced | ${{ steps.file-sync.outputs.files-synced }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Files failed | ${{ steps.file-sync.outputs.files-failed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total bytes | ${{ steps.file-sync.outputs.total-bytes }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changes committed | ${{ steps.verify-changed-files.outputs.changed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.file-sync.outputs.files-failed }}" -gt 0 ]; then
+            echo "⚠️ Some files failed to sync. Check the logs for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ All files synced successfully!" >> $GITHUB_STEP_SUMMARY
+          fi

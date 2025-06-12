@@ -1,0 +1,40 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+
+# Git and development files
+.git/
+.gitignore
+.github/workflows/
+*.md
+LICENSE
+
+# Test files and outputs
+tests/
+test-*
+*-test.*
+synced-files/
+test-synced-files/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log

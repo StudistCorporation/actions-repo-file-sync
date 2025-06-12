@@ -53,7 +53,97 @@ sources:
 
 ## 使い方
 
-### 基本的な使い方
+### GitHub Action として使用
+
+このツールは GitHub Action として簡単に使用できます：
+
+#### 基本的な使い方
+
+```yaml
+# .github/workflows/sync-files.yml
+name: Sync Repository Files
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 毎日実行
+  workflow_dispatch:      # 手動実行も可能
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync files from other repositories
+        uses: StudistCorporation/actions-repo-file-sync@main
+        with:
+          config: '.github/repo-file-sync.yaml'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit synced files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ./synced-files
+          git diff --staged --quiet || git commit -m "🔄 Sync files from repositories"
+          git push
+```
+
+#### 高度な使い方
+
+```yaml
+name: Advanced File Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync files with advanced options
+        uses: StudistCorporation/actions-repo-file-sync@main
+        with:
+          config: '.github/custom-sync-config.yaml'
+          github-token: ${{ secrets.PAT_TOKEN }}  # カスタムトークン
+          dry-run: ${{ github.event.inputs.dry-run }}
+        id: sync
+
+      - name: Show sync results
+        run: |
+          echo "Files synced: ${{ steps.sync.outputs.files-synced }}"
+          echo "Files failed: ${{ steps.sync.outputs.files-failed }}"
+          echo "Total bytes: ${{ steps.sync.outputs.total-bytes }}"
+```
+
+#### 入力パラメータ
+
+| パラメータ | 説明 | 必須 | デフォルト |
+|-----------|------|------|------------|
+| `config` | 設定ファイルのパス | No | `.github/repo-file-sync.yaml` |
+| `github-token` | GitHubトークン | No | `${{ github.token }}` |
+| `dry-run` | ドライランモード | No | `false` |
+
+#### 出力パラメータ
+
+| パラメータ | 説明 |
+|-----------|------|
+| `files-synced` | 成功したファイル数 |
+| `files-failed` | 失敗したファイル数 |
+| `total-bytes` | ダウンロード総バイト数 |
+
+### コマンドラインツールとして使用
+
+#### 基本的な使い方
 
 ```bash
 # デフォルト設定でファイルを同期
