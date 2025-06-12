@@ -1,6 +1,6 @@
-[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
+[![Build and Test](https://github.com/awesome-checkout-action/actions/workflows/test.yml/badge.svg)](https://github.com/awesome-checkout-action/actions/workflows/test.yml)
 
-# Checkout V4
+# Super Checkout V5
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -30,15 +30,15 @@ You are welcome to still raise bugs in this repo.
 
 # What's new
 
-Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
+Please refer to the [release page](https://github.com/awesome-checkout-action/releases/latest) for the latest release notes.
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
-    # Repository name with owner. For example, actions/checkout
+    # Repository name with owner. For example, awesome-checkout-action
     # Default: ${{ github.repository }}
     repository: ''
 
@@ -166,7 +166,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     sparse-checkout: .
 ```
@@ -174,7 +174,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     sparse-checkout: |
       .github
@@ -184,7 +184,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     sparse-checkout: |
       README.md
@@ -194,7 +194,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     fetch-depth: 0
 ```
@@ -202,7 +202,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     ref: my-branch
 ```
@@ -210,7 +210,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -220,12 +220,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -236,10 +236,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -250,12 +250,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v4
+  uses: awesome-checkout-action@v4
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -268,7 +268,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: awesome-checkout-action@v4
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -284,7 +284,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: awesome-checkout-action@v4
 ```
 
 ## Push a commit using the built-in token
@@ -295,7 +295,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: awesome-checkout-action@v4
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
@@ -317,7 +317,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: awesome-checkout-action@v4
         with:
           ref: ${{ github.head_ref }}
       - run: |

@@ -44,6 +44,7 @@ class GitHubClient:
         ref: str,
         file_path: str,
         output_path: Optional[Path] = None,
+        env_vars: Optional[dict[str, str]] = None,
     ) -> bytes:
         """Download a file from a GitHub repository.
         
@@ -55,9 +56,10 @@ class GitHubClient:
             ref: Git reference (branch, tag, or commit hash)
             file_path: Path to the file within the repository
             output_path: Optional local path to save the file
+            env_vars: Optional environment variables for content substitution
             
         Returns:
-            File content as bytes
+            File content as bytes (after environment variable substitution)
             
         Raises:
             requests.RequestException: If the download fails
@@ -102,6 +104,11 @@ class GitHubClient:
             f"({len(content)} bytes)"
         )
         
+        # Perform environment variable substitution if specified
+        if env_vars:
+            content = self._substitute_env_vars(content, env_vars)
+            logger.debug(f"Applied environment variable substitution to {repo}:{ref}:{file_path}")
+        
         # Save to file if output path specified
         if output_path:
             self._save_file(content, output_path)
@@ -133,6 +140,45 @@ class GitHubClient:
         except OSError as e:
             logger.error(f"Failed to save file to {output_path}: {e}")
             raise
+    
+    def _substitute_env_vars(self, content: bytes, env_vars: dict[str, str]) -> bytes:
+        """Substitute environment variables in file content.
+        
+        Replaces occurrences of environment variable names with their values
+        in the file content. Only substitutes if the file appears to be text.
+        
+        Args:
+            content: Original file content as bytes
+            env_vars: Dictionary mapping variable names to values
+            
+        Returns:
+            Modified content with environment variables substituted
+        """
+        try:
+            # Try to decode as text - if it fails, return original content
+            text_content = content.decode('utf-8')
+            
+            # Perform substitutions
+            modified_content = text_content
+            substitutions_made = 0
+            
+            for name, value in env_vars.items():
+                if name in modified_content:
+                    old_content = modified_content
+                    modified_content = modified_content.replace(name, value)
+                    if modified_content != old_content:
+                        substitutions_made += 1
+                        logger.debug(f"Replaced '{name}' with '{value}'")
+            
+            if substitutions_made > 0:
+                logger.info(f"Made {substitutions_made} environment variable substitutions")
+            
+            return modified_content.encode('utf-8')
+            
+        except UnicodeDecodeError:
+            # File is binary, return original content unchanged
+            logger.debug("File appears to be binary, skipping environment variable substitution")
+            return content
     
     def test_connection(self) -> bool:
         """Test connection to GitHub by making a simple request.

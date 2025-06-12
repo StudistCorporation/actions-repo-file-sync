@@ -16,6 +16,14 @@ from typing_extensions import TypedDict
 logger = logging.getLogger(__name__)
 
 
+class EnvConfig(TypedDict):
+    """Configuration for an environment variable.
+    Defines a name-value pair for environment variable substitution.
+    """
+    name: str
+    value: str
+
+
 class SourceConfig(TypedDict):
     """Configuration for a single source repository.
     
@@ -29,8 +37,9 @@ class SourceConfig(TypedDict):
 class Config(TypedDict):
     """Main configuration structure.
     
-    Contains the list of source repositories to sync files from.
+    Contains environment variables and list of source repositories to sync files from.
     """
+    envs: list[EnvConfig]
     sources: list[SourceConfig]
 
 
@@ -73,6 +82,37 @@ def load_config(config_path: Path) -> Config:
     if "sources" not in data:
         raise ValueError("Configuration must contain 'sources' key")
     
+    # Parse environment variables (optional)
+    envs = data.get("envs", [])
+    if not isinstance(envs, list):
+        raise ValueError("'envs' must be a list")
+    
+    validated_envs = []
+    for i, env in enumerate(envs):
+        if not isinstance(env, dict):
+            raise ValueError(f"Environment variable {i} must be a dictionary")
+        
+        # Validate required fields
+        required_fields = ["name", "value"]
+        for field in required_fields:
+            if field not in env:
+                raise ValueError(f"Environment variable {i} missing required field: {field}")
+        
+        name = env["name"]
+        value = env["value"]
+        
+        if not isinstance(name, str):
+            raise ValueError(f"Environment variable {i}: 'name' must be a string")
+        if not isinstance(value, str):
+            raise ValueError(f"Environment variable {i}: 'value' must be a string")
+        
+        validated_env: EnvConfig = {
+            "name": name,
+            "value": value,
+        }
+        validated_envs.append(validated_env)
+    
+    # Parse sources
     sources = data["sources"]
     if not isinstance(sources, list):
         raise ValueError("'sources' must be a list")
@@ -115,8 +155,14 @@ def load_config(config_path: Path) -> Config:
         }
         validated_sources.append(validated_source)
     
-    config: Config = {"sources": validated_sources}
-    logger.info(f"Successfully loaded configuration with {len(validated_sources)} sources")
+    config: Config = {
+        "envs": validated_envs,
+        "sources": validated_sources
+    }
+    logger.info(
+        f"Successfully loaded configuration with {len(validated_envs)} environment variables "
+        f"and {len(validated_sources)} sources"
+    )
     
     return config
 

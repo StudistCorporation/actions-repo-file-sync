@@ -129,12 +129,17 @@ class RepoFileSync:
         if not dry_run:
             output_dir.mkdir(parents=True, exist_ok=True)
         
+        # Build environment variables dictionary
+        env_vars = {env["name"]: env["value"] for env in config["envs"]}
+        if env_vars:
+            logger.info(f"Using {len(env_vars)} environment variables for substitution")
+        
         # Process each source repository
         for source in config["sources"]:
             logger.info(f"Processing source: {source['repo']} ({source['ref']})")
             
             source_result = self._sync_source(
-                source, output_dir, dry_run, preserve_structure
+                source, output_dir, dry_run, preserve_structure, env_vars
             )
             
             # Merge results
@@ -151,6 +156,7 @@ class RepoFileSync:
         output_dir: Path,
         dry_run: bool,
         preserve_structure: bool,
+        env_vars: dict[str, str],
     ) -> SyncResult:
         """Synchronize files from a single source repository.
         
@@ -159,6 +165,7 @@ class RepoFileSync:
             output_dir: Output directory
             dry_run: Whether this is a dry run
             preserve_structure: Whether to preserve directory structure
+            env_vars: Environment variables for content substitution
             
         Returns:
             Sync result for this source
@@ -188,7 +195,7 @@ class RepoFileSync:
                 
                 # Download the file
                 content = self.github_client.download_file(
-                    repo, ref, file_path, output_path
+                    repo, ref, file_path, output_path, env_vars
                 )
                 
                 result.add_success(full_file_id, len(content))
