@@ -9,40 +9,46 @@ from src.cli import main
 
 def main_with_env_parsing() -> None:
     """Main entry point that handles GitHub Actions environment variables."""
-    # Parse GitHub Actions environment variables
-    if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
-        os.environ.setdefault("CREATE_PR", "true")
-    if os.getenv("INPUT_PR_TITLE"):
-        os.environ.setdefault("PR_TITLE", os.getenv("INPUT_PR_TITLE"))
-    if os.getenv("INPUT_PR_BODY"):
-        os.environ.setdefault("PR_BODY", os.getenv("INPUT_PR_BODY"))
-    if os.getenv("INPUT_BRANCH_NAME"):
-        os.environ.setdefault("BRANCH_NAME", os.getenv("INPUT_BRANCH_NAME"))
-    
-    # Build command line arguments from environment
     import sys
     
-    # Add PR-related arguments if set
-    if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
-        sys.argv.append("--create-pr")
+    # Debug: Print all INPUT_ environment variables
+    print("DEBUG: Environment variables:")
+    for key, value in os.environ.items():
+        if key.startswith("INPUT_"):
+            print(f"  {key}={value}")
     
-    if os.getenv("INPUT_PR_TITLE"):
-        sys.argv.extend(["--pr-title", os.getenv("INPUT_PR_TITLE")])
+    # GitHub Actions converts hyphens to underscores in environment variable names
+    # action.yml: create-pr -> INPUT_CREATE_PR
     
-    if os.getenv("INPUT_PR_BODY"):
-        sys.argv.extend(["--pr-body", os.getenv("INPUT_PR_BODY")])
-    
-    if os.getenv("INPUT_BRANCH_NAME"):
-        sys.argv.extend(["--branch-name", os.getenv("INPUT_BRANCH_NAME")])
-    
+    # Add config argument
     if os.getenv("INPUT_CONFIG"):
         sys.argv.extend(["--config", os.getenv("INPUT_CONFIG")])
     
+    # Add dry-run argument
     if os.getenv("INPUT_DRY_RUN", "false").lower() == "true":
         sys.argv.append("--dry-run")
     
+    # Add PR-related arguments
+    if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
+        sys.argv.append("--create-pr")
+        print("DEBUG: Adding --create-pr flag")
+    
+    if os.getenv("INPUT_PR_TITLE"):
+        sys.argv.extend(["--pr-title", os.getenv("INPUT_PR_TITLE")])
+        print(f"DEBUG: Adding --pr-title '{os.getenv('INPUT_PR_TITLE')}'")
+    
+    if os.getenv("INPUT_PR_BODY"):
+        sys.argv.extend(["--pr-body", os.getenv("INPUT_PR_BODY")])
+        print("DEBUG: Adding --pr-body")
+    
+    if os.getenv("INPUT_BRANCH_NAME"):
+        sys.argv.extend(["--branch-name", os.getenv("INPUT_BRANCH_NAME")])
+        print(f"DEBUG: Adding --branch-name '{os.getenv('INPUT_BRANCH_NAME')}'")
+    
     # Enable verbose logging for debugging
     sys.argv.append("--verbose")
+    
+    print(f"DEBUG: Final sys.argv: {sys.argv}")
     
     main()
 
