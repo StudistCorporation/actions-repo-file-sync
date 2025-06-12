@@ -19,10 +19,35 @@ log() {
 CONFIG_FILE="${INPUT_CONFIG:-.github/repo-file-sync.yaml}"
 OUTPUT_DIR="./synced-files"  # Fixed output directory
 DRY_RUN=""
+CREATE_PR=""
+PR_TITLE=""
+PR_BODY=""
+BRANCH_NAME=""
 
 # Set flags based on input parameters
 if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
     DRY_RUN="--dry-run"
+fi
+
+# Handle PR creation parameters
+if [[ "${INPUT_CREATE_PR:-false}" == "true" ]]; then
+    CREATE_PR="--create-pr"
+    log "PR creation enabled"
+fi
+
+if [[ -n "${INPUT_PR_TITLE:-}" ]]; then
+    PR_TITLE="--pr-title"
+    log "PR title: ${INPUT_PR_TITLE}"
+fi
+
+if [[ -n "${INPUT_PR_BODY:-}" ]]; then
+    PR_BODY="--pr-body"
+    log "PR body provided"
+fi
+
+if [[ -n "${INPUT_BRANCH_NAME:-}" ]]; then
+    BRANCH_NAME="--branch-name"
+    log "Branch name: ${INPUT_BRANCH_NAME}"
 fi
 
 # Override with command line arguments if provided
@@ -61,23 +86,38 @@ fi
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_DIR}"
 
-# Build command
+# Build command - Use src.cli directly with all arguments
 CMD=(uv run python -m src.cli)
 CMD+=("--config" "${CONFIG_FILE}")
 CMD+=("--output" "${OUTPUT_DIR}")
+CMD+=("--verbose")  # Enable verbose logging
 
 if [[ -n "${DRY_RUN}" ]]; then
     CMD+=("${DRY_RUN}")
+fi
+
+# Add PR creation arguments
+if [[ -n "${CREATE_PR}" ]]; then
+    CMD+=("${CREATE_PR}")
+fi
+
+if [[ -n "${PR_TITLE}" ]]; then
+    CMD+=("${PR_TITLE}" "${INPUT_PR_TITLE}")
+fi
+
+if [[ -n "${PR_BODY}" ]]; then
+    CMD+=("${PR_BODY}" "${INPUT_PR_BODY}")
+fi
+
+if [[ -n "${BRANCH_NAME}" ]]; then
+    CMD+=("${BRANCH_NAME}" "${INPUT_BRANCH_NAME}")
 fi
 
 # Run the sync command and capture output
 log "Executing: ${CMD[*]}"
 
 # Capture stdout and stderr
-if output=$(uv run python -m src.cli \
-    --config "${CONFIG_FILE}" \
-    --output "${OUTPUT_DIR}" \
-    ${DRY_RUN} 2>&1); then
+if output=$(${CMD[@]} 2>&1); then
     
     log "Sync completed successfully"
     exit_code=0
