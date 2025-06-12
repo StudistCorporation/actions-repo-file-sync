@@ -288,8 +288,10 @@ class GitHubClient:
         body: str,
         head_branch: str,
         base_branch: str = "main",
+        reviewers: Optional[list[str]] = None,
+        team_reviewers: Optional[list[str]] = None,
     ) -> Optional[str]:
-        """Create a pull request in the specified repository.
+        """Create a pull request in the specified repository, based on TypeScript implementation.
 
         Args:
             repo: Repository in format 'owner/repo'
@@ -297,6 +299,8 @@ class GitHubClient:
             body: Body/description of the pull request
             head_branch: Source branch name
             base_branch: Target branch name (default: 'main')
+            reviewers: List of user reviewers to request
+            team_reviewers: List of team reviewers to request
 
         Returns:
             Pull request URL if successful, None otherwise
@@ -305,9 +309,10 @@ class GitHubClient:
             >>> client = GitHubClient()
             >>> pr_url = client.create_pull_request(
             ...     "owner/repo",
-            ...     "🔄 Sync files from repositories",
+            ...     "[repo-file-sync] Synchronize files",
             ...     "Automated file sync",
-            ...     "sync/repo-files"
+            ...     "sync/repo-files",
+            ...     reviewers=["user1", "user2"]
             ... )
             >>> print(pr_url)
             'https://github.com/owner/repo/pull/123'
@@ -334,6 +339,11 @@ class GitHubClient:
             pr_number = pr_data["number"]
 
             logger.info(f"Pull request created successfully: #{pr_number}")
+
+            # Add reviewers if specified (like TypeScript version)
+            if reviewers or team_reviewers:
+                self._add_pr_reviewers(repo, pr_number, reviewers, team_reviewers)
+
             return pr_url
 
         except requests.exceptions.RequestException as e:
@@ -343,11 +353,53 @@ class GitHubClient:
             logger.error(f"Failed to parse pull request response: {e}")
             return None
 
-    def create_branch(self, branch_name: str) -> bool:
-        """Create and checkout a new git branch.
+    def _add_pr_reviewers(
+        self,
+        repo: str,
+        pr_number: int,
+        reviewers: Optional[list[str]] = None,
+        team_reviewers: Optional[list[str]] = None,
+    ) -> bool:
+        """Add reviewers to a pull request.
+
+        Args:
+            repo: Repository in format 'owner/repo'
+            pr_number: Pull request number
+            reviewers: List of user reviewers to add
+            team_reviewers: List of team reviewers to add
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            url = f"{self.API_URL}/repos/{repo}/pulls/{pr_number}/requested_reviewers"
+            data = {}
+            
+            if reviewers:
+                data["reviewers"] = reviewers
+            if team_reviewers:
+                data["team_reviewers"] = team_reviewers
+            
+            if not data:
+                return True  # Nothing to add
+            
+            logger.info(f"Adding reviewers to PR #{pr_number}: {data}")
+            response = self.session.post(url, json=data, timeout=self.timeout)
+            response.raise_for_status()
+            
+            logger.info(f"Successfully added reviewers to PR #{pr_number}")
+            return True
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to add reviewers to PR #{pr_number}: {e}")
+            return False
+
+    def create_branch(self, branch_name: str, base_branch: str = "main") -> bool:
+        """Create and checkout a git branch, based on TypeScript implementation.
 
         Args:
             branch_name: Name of the branch to create
+            base_branch: Base branch to create from (default: main)
 
         Returns:
             True if successful, False otherwise
@@ -365,70 +417,106 @@ class GitHubClient:
                 capture_output=True,
             )
 
-            # Create and checkout new branch
-            subprocess.run(
-                ["git", "checkout", "-b", branch_name],
-                check=True,
-                capture_output=True,
-            )
+            # Try to fetch existing branch first (like TypeScript version)
+            try:
+                logger.info(f"Attempting to fetch and checkout existing branch: {branch_name}")
+                subprocess.run(
+                    ["git", "fetch", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
+                subprocess.run(
+                    ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
+                    check=True,
+                    capture_output=True,
+                )
+                logger.info(f"Successfully checked out existing branch: {branch_name}")
+            except subprocess.CalledProcessError:
+                # Branch doesn't exist, create new one from base branch
+                logger.info(f"Creating new branch {branch_name} from {base_branch}")
+                subprocess.run(
+                    ["git", "checkout", "-b", branch_name, base_branch],
+                    check=True,
+                    capture_output=True,
+                )
+                logger.info(f"Successfully created new branch: {branch_name}")
 
-            logger.info(f"Successfully created and checked out branch: {branch_name}")
             return True
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to create branch {branch_name}: {e}")
+            logger.error(f"Failed to create/checkout branch {branch_name}: {e}")
             return False
 
     def add_files_and_push(
         self,
         branch_name: str,
-        commit_message: str,
-        files_to_add: list[str],
+        commit_message: str = "[repo-file-sync] Synchronize files",
+        files_to_add: Optional[list[str]] = None,
     ) -> bool:
-        """Add files to git and push to remote branch.
+        """Add files to git and push to remote branch, based on TypeScript implementation.
 
         Args:
             branch_name: Name of the branch to push to
             commit_message: Commit message for the changes
-            files_to_add: List of file paths to add to the commit
+            files_to_add: List of file paths to add, or None to add all changes
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            # Add files
-            for file_path in files_to_add:
+            # Add files based on TypeScript pattern: add -N . first, then check diff
+            if files_to_add:
+                # Add specific files
+                for file_path in files_to_add:
+                    subprocess.run(
+                        ["git", "add", file_path],
+                        check=True,
+                        capture_output=True,
+                    )
+            else:
+                # Add all files (TypeScript pattern: git add -N .)
                 subprocess.run(
-                    ["git", "add", file_path],
+                    ["git", "add", "-N", "."],
                     check=True,
                     capture_output=True,
                 )
 
-            # Check if there are changes to commit
+            # Check if there are changes using git diff --name-only (like TypeScript)
             result = subprocess.run(
-                ["git", "diff", "--staged", "--quiet"],
+                ["git", "diff", "--name-only"],
+                capture_output=True,
+                text=True,
+            )
+
+            changed_files = result.stdout.strip()
+            if not changed_files:
+                logger.info("No changes detected to commit")
+                return True  # Return True to allow PR creation workflow to continue
+            
+            logger.info(f"Changes detected in files: {changed_files}")
+            
+            # Add all changes and commit (like TypeScript: git add .)
+            subprocess.run(
+                ["git", "add", "."],
+                check=True,
                 capture_output=True,
             )
 
-            if result.returncode == 0:
-                logger.info("No changes to commit")
-                return True  # Return True even if no changes to allow PR creation workflow to continue
-            else:
-                # Commit changes
-                subprocess.run(
-                    ["git", "commit", "-m", commit_message],
-                    check=True,
-                    capture_output=True,
-                )
+            # Commit changes
+            subprocess.run(
+                ["git", "commit", "-m", commit_message],
+                check=True,
+                capture_output=True,
+            )
 
-                # Push to remote
-                subprocess.run(
-                    ["git", "push", "origin", branch_name],
-                    check=True,
-                    capture_output=True,
-                )
+            # Push to remote
+            subprocess.run(
+                ["git", "push", "origin", branch_name],
+                check=True,
+                capture_output=True,
+            )
 
-            logger.info(f"Successfully pushed files to branch: {branch_name}")
+            logger.info(f"Successfully pushed changes to branch: {branch_name}")
             return True
 
         except subprocess.CalledProcessError as e:
@@ -455,5 +543,5 @@ class GitHubClient:
         if not self.create_branch(branch_name):
             return False
         
-        # Add files and push
-        return self.add_files_and_push(branch_name, commit_message, files_to_add)
+        # Add files and push (pass None to use TypeScript-style "add all" behavior)
+        return self.add_files_and_push(branch_name, commit_message, None)
