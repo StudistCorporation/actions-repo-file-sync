@@ -360,32 +360,65 @@ class GitHubClient:
             True if successful, False otherwise
         """
         try:
+            logger.info(f"Setting up git and pushing branch: {branch_name}")
+            
             # Configure git user
+            logger.debug("Configuring git user")
             subprocess.run(
                 ["git", "config", "user.name", "actions-repo-file-sync"],
                 check=True,
                 capture_output=True,
+                text=True,
             )
             subprocess.run(
                 ["git", "config", "user.email", "action@github.com"],
                 check=True,
                 capture_output=True,
+                text=True,
             )
 
-            # Create and checkout new branch
+            # Check current status
+            logger.debug("Checking git status")
+            status_result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            
+            if not status_result.stdout.strip():
+                logger.info("No changes detected, skipping commit and PR creation")
+                return False
+
+            # Create and checkout new branch (delete if exists)
+            logger.debug(f"Creating branch: {branch_name}")
+            try:
+                subprocess.run(
+                    ["git", "branch", "-D", branch_name],
+                    capture_output=True,
+                    text=True,
+                )
+                logger.debug(f"Deleted existing branch: {branch_name}")
+            except subprocess.CalledProcessError:
+                pass  # Branch doesn't exist, that's fine
+
             subprocess.run(
                 ["git", "checkout", "-b", branch_name],
                 check=True,
                 capture_output=True,
+                text=True,
             )
 
             # Add files
+            logger.debug(f"Adding files: {files_to_add}")
             for file_path in files_to_add:
-                subprocess.run(
+                result = subprocess.run(
                     ["git", "add", file_path],
-                    check=True,
                     capture_output=True,
+                    text=True,
                 )
+                if result.returncode != 0:
+                    logger.warning(f"Failed to add {file_path}: {result.stderr}")
 
             # Check if there are changes to commit
             result = subprocess.run(
@@ -394,21 +427,33 @@ class GitHubClient:
             )
 
             if result.returncode == 0:
-                logger.info("No changes to commit")
+                logger.info("No staged changes to commit")
                 return False
 
+            # Show what will be committed
+            diff_result = subprocess.run(
+                ["git", "diff", "--staged", "--name-only"],
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Files to be committed: {diff_result.stdout.strip()}")
+
             # Commit changes
+            logger.debug("Committing changes")
             subprocess.run(
                 ["git", "commit", "-m", commit_message],
                 check=True,
                 capture_output=True,
+                text=True,
             )
 
             # Push to remote
-            subprocess.run(
-                ["git", "push", "origin", branch_name],
+            logger.debug(f"Pushing branch: {branch_name}")
+            push_result = subprocess.run(
+                ["git", "push", "-u", "origin", branch_name],
                 check=True,
                 capture_output=True,
+                text=True,
             )
 
             logger.info(f"Successfully pushed branch: {branch_name}")
@@ -416,4 +461,8 @@ class GitHubClient:
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Git operation failed: {e}")
+            if e.stderr:
+                logger.error(f"Git stderr: {e.stderr.decode() if isinstance(e.stderr, bytes) else e.stderr}")
+            if e.stdout:
+                logger.debug(f"Git stdout: {e.stdout.decode() if isinstance(e.stdout, bytes) else e.stdout}")
             return False

@@ -153,24 +153,53 @@ def create_pull_request(
     """
     logger = logging.getLogger(__name__)
     
-    # Get repository info from environment
+    logger.info("Starting PR creation process")
+    
+    # Debug: Show environment variables
     github_repository = os.getenv("GITHUB_REPOSITORY")
+    github_token = os.getenv("GITHUB_TOKEN")
+    github_actor = os.getenv("GITHUB_ACTOR")
+    github_ref = os.getenv("GITHUB_REF")
+    
+    logger.info(f"Environment check:")
+    logger.info(f"  GITHUB_REPOSITORY: {github_repository}")
+    logger.info(f"  GITHUB_TOKEN: {'***' if github_token else 'NOT SET'}")
+    logger.info(f"  GITHUB_ACTOR: {github_actor}")
+    logger.info(f"  GITHUB_REF: {github_ref}")
+    
     if not github_repository:
         logger.error("GITHUB_REPOSITORY environment variable not set")
+        return False
+    
+    if not github_token:
+        logger.error("GITHUB_TOKEN environment variable not set")
         return False
 
     commit_message = pr_title
     
-    # Prepare list of files to add
-    files_to_add = [str(output_dir)]  # Add the entire output directory
+    # Prepare list of files to add - be more specific
+    files_to_add = [str(output_dir)]
+    if output_dir.exists():
+        logger.info(f"Output directory exists: {output_dir}")
+        # Also add individual files for better tracking
+        for file_path in output_dir.rglob("*"):
+            if file_path.is_file():
+                files_to_add.append(str(file_path))
+                logger.debug(f"Will add file: {file_path}")
+    else:
+        logger.warning(f"Output directory does not exist: {output_dir}")
+    
+    logger.info(f"Files to add: {len(files_to_add)} items")
     
     with GitHubClient(timeout=timeout) as client:
         # Setup git and push changes
+        logger.info("Setting up git and pushing changes...")
         if not client.setup_git_and_push(branch_name, commit_message, files_to_add):
             logger.error("Failed to setup git and push changes")
             return False
 
         # Create pull request
+        logger.info(f"Creating pull request in repository: {github_repository}")
         pr_url = client.create_pull_request(
             github_repository,
             pr_title,
@@ -179,10 +208,10 @@ def create_pull_request(
         )
         
         if pr_url:
-            logger.info(f"Pull request created: {pr_url}")
+            logger.info(f"✅ Pull request created successfully: {pr_url}")
             return True
         else:
-            logger.error("Failed to create pull request")
+            logger.error("❌ Failed to create pull request")
             return False
 
 

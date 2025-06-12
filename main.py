@@ -41,6 +41,9 @@ def main_with_env_parsing() -> None:
     if os.getenv("INPUT_DRY_RUN", "false").lower() == "true":
         sys.argv.append("--dry-run")
     
+    # Enable verbose logging for debugging
+    sys.argv.append("--verbose")
+    
     main()
 
 if __name__ == "__main__":
