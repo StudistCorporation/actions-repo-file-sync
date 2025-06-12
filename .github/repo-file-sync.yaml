@@ -1,8 +1,4 @@
-envs:
-  - name: actions/checkout
-    value: awesome-checkout-action
-  - name: Checkout V4
-    value: Super Checkout V5
+envs_file: repo-file-sync.envs.yaml
 sources:
   - repo: StudistCorporation/actions-repo-file-sync
     ref: 7813600516d6e6d6ebb50bc9ef8ef7555b39f6b7

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from typing_extensions import TypedDict
@@ -39,10 +39,12 @@ class SourceConfig(TypedDict):
 class Config(TypedDict):
     """Main configuration structure.
 
-    Contains environment variables and list of source repositories to sync files from.
+    Contains environment variables file path and list of source repositories to sync files from.
+    Environment variables are defined in a separate file.
     """
 
     envs: list[EnvConfig]
+    envs_file: str
     sources: list[SourceConfig]
 
 
@@ -84,38 +86,18 @@ def load_config(config_path: Path) -> Config:
 
     if "sources" not in data:
         raise ValueError("Configuration must contain 'sources' key")
+    
+    if "envs_file" not in data:
+        raise ValueError("Configuration must contain 'envs_file' key")
 
-    # Parse environment variables (optional)
-    envs = data.get("envs", [])
-    if not isinstance(envs, list):
-        raise ValueError("'envs' must be a list")
+    # Parse environment variables file (required)
+    envs_file = data["envs_file"]
+    
+    if not isinstance(envs_file, str):
+        raise ValueError("'envs_file' must be a string")
 
-    validated_envs = []
-    for i, env in enumerate(envs):
-        if not isinstance(env, dict):
-            raise ValueError(f"Environment variable {i} must be a dictionary")
-
-        # Validate required fields
-        required_fields = ["name", "value"]
-        for field in required_fields:
-            if field not in env:
-                raise ValueError(
-                    f"Environment variable {i} missing required field: {field}"
-                )
-
-        name = env["name"]
-        value = env["value"]
-
-        if not isinstance(name, str):
-            raise ValueError(f"Environment variable {i}: 'name' must be a string")
-        if not isinstance(value, str):
-            raise ValueError(f"Environment variable {i}: 'value' must be a string")
-
-        validated_env: EnvConfig = {
-            "name": name,
-            "value": value,
-        }
-        validated_envs.append(validated_env)
+    # Load environment variables from external file
+    validated_envs = _load_envs_file(config_path.parent / envs_file)
 
     # Parse sources
     sources = data["sources"]
@@ -160,13 +142,77 @@ def load_config(config_path: Path) -> Config:
         }
         validated_sources.append(validated_source)
 
-    config: Config = {"envs": validated_envs, "sources": validated_sources}
+    config: Config = {
+        "envs": validated_envs,
+        "envs_file": envs_file,
+        "sources": validated_sources
+    }
+    
     logger.info(
         f"Successfully loaded configuration with {len(validated_envs)} environment variables "
-        f"and {len(validated_sources)} sources"
+        f"from {envs_file} and {len(validated_sources)} sources"
     )
 
     return config
+
+
+def _load_envs_file(envs_file_path: Path) -> list[EnvConfig]:
+    """Load environment variables from external YAML file.
+    
+    Args:
+        envs_file_path: Path to the environment variables YAML file
+        
+    Returns:
+        List of validated environment variable configurations
+        
+    Raises:
+        FileNotFoundError: If the envs file doesn't exist
+        yaml.YAMLError: If the YAML is malformed
+        ValueError: If the envs structure is invalid
+    """
+    if not envs_file_path.exists():
+        raise FileNotFoundError(f"Environment variables file not found: {envs_file_path}")
+    
+    logger.info(f"Loading environment variables from {envs_file_path}")
+    
+    try:
+        with envs_file_path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise yaml.YAMLError(f"Failed to parse environment variables YAML: {e}") from e
+    
+    if not isinstance(data, list):
+        raise ValueError("Environment variables file must contain a list")
+    
+    validated_envs = []
+    for i, env in enumerate(data):
+        if not isinstance(env, dict):
+            raise ValueError(f"Environment variable {i} in external file must be a dictionary")
+
+        # Validate required fields
+        required_fields = ["name", "value"]
+        for field in required_fields:
+            if field not in env:
+                raise ValueError(
+                    f"Environment variable {i} in external file missing required field: {field}"
+                )
+
+        name = env["name"]
+        value = env["value"]
+
+        if not isinstance(name, str):
+            raise ValueError(f"Environment variable {i} in external file: 'name' must be a string")
+        if not isinstance(value, str):
+            raise ValueError(f"Environment variable {i} in external file: 'value' must be a string")
+
+        validated_env: EnvConfig = {
+            "name": name,
+            "value": value,
+        }
+        validated_envs.append(validated_env)
+    
+    logger.info(f"Loaded {len(validated_envs)} environment variables from external file")
+    return validated_envs
 
 
 def validate_config(data: Any) -> Config:
