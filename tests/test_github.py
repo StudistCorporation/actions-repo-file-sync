@@ -12,6 +12,7 @@ from src.github import GitHubClient
 class TestGitHubClient:
     """Test cases for GitHubClient."""
 
+    @patch.dict("os.environ", {}, clear=True)
     def test_init_without_token(self) -> None:
         """Test GitHubClient initialization without token."""
         client = GitHubClient()

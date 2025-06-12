@@ -149,16 +149,16 @@ Edge cases:
             pytest.skip("Real configuration files not found")
 
         config = load_config(config_file)
-        env_vars = {env["name"]: env["value"] for env in config["envs"]}
 
         # Sync files using real GitHub API
         token = os.getenv("GITHUB_TOKEN")
-        client = GitHubClient(token)
-
+        
         output_dir = tmp_path / "real_sync"
         output_dir.mkdir()
 
-        client.sync_files(config["sources"], env_vars, output_dir)
+        from src.sync import RepoFileSync
+        with RepoFileSync(github_token=token) as sync:
+            sync.sync(config, output_dir)
 
         # Verify files were downloaded
         readme_path = output_dir / "README.md"
