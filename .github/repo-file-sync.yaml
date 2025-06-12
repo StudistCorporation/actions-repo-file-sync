@@ -1,0 +1,9 @@
+sources:
+  - repo: actions/checkout
+    ref: main
+    files:
+    - README.md
+  - repo: actions/labeler
+    ref: main
+    files:
+    - .gitignore
