@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
 from .config import load_config
+from .github import GitHubClient
 from .sync import RepoFileSync
 
 
@@ -98,7 +100,90 @@ Examples:
         help="Test GitHub connectivity and exit",
     )
 
+    parser.add_argument(
+        "--create-pr",
+        action="store_true",
+        help="Create a pull request with the synced files",
+    )
+
+    parser.add_argument(
+        "--pr-title",
+        type=str,
+        default="🔄 Sync files from repositories",
+        help="Title for the pull request (default: '🔄 Sync files from repositories')",
+    )
+
+    parser.add_argument(
+        "--pr-body",
+        type=str,
+        default="Automated file sync from configured repositories",
+        help="Body for the pull request (default: 'Automated file sync from configured repositories')",
+    )
+
+    parser.add_argument(
+        "--branch-name",
+        type=str,
+        default="sync/repo-files",
+        help="Branch name for the pull request (default: 'sync/repo-files')",
+    )
+
     return parser
+
+
+def create_pull_request(
+    output_dir: Path,
+    branch_name: str,
+    pr_title: str,
+    pr_body: str,
+    synced_files: list[str],
+    timeout: int,
+) -> bool:
+    """Create a pull request with the synced files.
+
+    Args:
+        output_dir: Directory containing synced files
+        branch_name: Name of the branch to create
+        pr_title: Title of the pull request
+        pr_body: Body of the pull request
+        synced_files: List of synced files
+        timeout: Request timeout
+
+    Returns:
+        True if PR was created successfully, False otherwise
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Get repository info from environment
+    github_repository = os.getenv("GITHUB_REPOSITORY")
+    if not github_repository:
+        logger.error("GITHUB_REPOSITORY environment variable not set")
+        return False
+
+    commit_message = pr_title
+    
+    # Prepare list of files to add
+    files_to_add = [str(output_dir)]  # Add the entire output directory
+    
+    with GitHubClient(timeout=timeout) as client:
+        # Setup git and push changes
+        if not client.setup_git_and_push(branch_name, commit_message, files_to_add):
+            logger.error("Failed to setup git and push changes")
+            return False
+
+        # Create pull request
+        pr_url = client.create_pull_request(
+            github_repository,
+            pr_title,
+            pr_body,
+            branch_name,
+        )
+        
+        if pr_url:
+            logger.info(f"Pull request created: {pr_url}")
+            return True
+        else:
+            logger.error("Failed to create pull request")
+            return False
 
 
 def main() -> None:
@@ -150,6 +235,21 @@ def main() -> None:
             logger.info(f"✓ Sync completed successfully: {result}")
             if not args.dry_run:
                 logger.info(f"Files saved to: {args.output.absolute()}")
+                
+                # Create pull request if requested
+                if args.create_pr and result.synced_files:
+                    logger.info("Creating pull request...")
+                    pr_created = create_pull_request(
+                        args.output,
+                        args.branch_name,
+                        args.pr_title,
+                        args.pr_body,
+                        result.synced_files,
+                        args.timeout,
+                    )
+                    if not pr_created:
+                        logger.error("Failed to create pull request")
+                        sys.exit(1)
         else:
             logger.error(f"✗ Sync completed with errors: {result}")
 

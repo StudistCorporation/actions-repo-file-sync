@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import subprocess
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -279,3 +280,140 @@ class GitHubClient:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Context manager exit."""
         self.close()
+
+    def create_pull_request(
+        self,
+        repo: str,
+        title: str,
+        body: str,
+        head_branch: str,
+        base_branch: str = "main",
+    ) -> Optional[str]:
+        """Create a pull request in the specified repository.
+
+        Args:
+            repo: Repository in format 'owner/repo'
+            title: Title of the pull request
+            body: Body/description of the pull request
+            head_branch: Source branch name
+            base_branch: Target branch name (default: 'main')
+
+        Returns:
+            Pull request URL if successful, None otherwise
+
+        Example:
+            >>> client = GitHubClient()
+            >>> pr_url = client.create_pull_request(
+            ...     "owner/repo",
+            ...     "🔄 Sync files from repositories",
+            ...     "Automated file sync",
+            ...     "sync/repo-files"
+            ... )
+            >>> print(pr_url)
+            'https://github.com/owner/repo/pull/123'
+        """
+        if not self.token:
+            logger.error("GitHub token required for creating pull requests")
+            return None
+
+        try:
+            url = f"{self.API_URL}/repos/{repo}/pulls"
+            data = {
+                "title": title,
+                "body": body,
+                "head": head_branch,
+                "base": base_branch,
+            }
+
+            logger.info(f"Creating pull request: {title}")
+            response = self.session.post(url, json=data, timeout=self.timeout)
+            response.raise_for_status()
+
+            pr_data = response.json()
+            pr_url = pr_data["html_url"]
+            pr_number = pr_data["number"]
+
+            logger.info(f"Pull request created successfully: #{pr_number}")
+            return pr_url
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to create pull request: {e}")
+            return None
+        except (KeyError, ValueError) as e:
+            logger.error(f"Failed to parse pull request response: {e}")
+            return None
+
+    def setup_git_and_push(
+        self,
+        branch_name: str,
+        commit_message: str,
+        files_to_add: list[str],
+    ) -> bool:
+        """Set up git configuration and push changes to a new branch.
+
+        Args:
+            branch_name: Name of the branch to create and push to
+            commit_message: Commit message for the changes
+            files_to_add: List of file paths to add to the commit
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Configure git user
+            subprocess.run(
+                ["git", "config", "user.name", "actions-repo-file-sync"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "action@github.com"],
+                check=True,
+                capture_output=True,
+            )
+
+            # Create and checkout new branch
+            subprocess.run(
+                ["git", "checkout", "-b", branch_name],
+                check=True,
+                capture_output=True,
+            )
+
+            # Add files
+            for file_path in files_to_add:
+                subprocess.run(
+                    ["git", "add", file_path],
+                    check=True,
+                    capture_output=True,
+                )
+
+            # Check if there are changes to commit
+            result = subprocess.run(
+                ["git", "diff", "--staged", "--quiet"],
+                capture_output=True,
+            )
+
+            if result.returncode == 0:
+                logger.info("No changes to commit")
+                return False
+
+            # Commit changes
+            subprocess.run(
+                ["git", "commit", "-m", commit_message],
+                check=True,
+                capture_output=True,
+            )
+
+            # Push to remote
+            subprocess.run(
+                ["git", "push", "origin", branch_name],
+                check=True,
+                capture_output=True,
+            )
+
+            logger.info(f"Successfully pushed branch: {branch_name}")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Git operation failed: {e}")
+            return False
