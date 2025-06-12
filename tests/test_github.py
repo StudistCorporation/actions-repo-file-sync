@@ -80,7 +80,10 @@ class TestGitHubClient:
         # Verify token was used in request
         assert len(responses.calls) == 1
         assert "Authorization" in responses.calls[0].request.headers
-        assert responses.calls[0].request.headers["Authorization"] == "token ghp_test_token"
+        assert (
+            responses.calls[0].request.headers["Authorization"]
+            == "token ghp_test_token"
+        )
 
     @responses.activate
     def test_download_file_both_methods_fail(self) -> None:
@@ -145,7 +148,9 @@ class TestGitHubClient:
         }
 
         result = client._substitute_env_vars(content, env_vars)
-        expected = b'{"repo": "awesome-checkout-action", "version": "Super Checkout V5"}'
+        expected = (
+            b'{"repo": "awesome-checkout-action", "version": "Super Checkout V5"}'
+        )
         assert result == expected
 
     def test_substitute_env_vars_binary_content(self) -> None:
@@ -174,15 +179,19 @@ class TestGitHubClient:
             "actions/checkout": "awesome-checkout-action",
             "Checkout V4": "Super Checkout V5",
         }
-        
+
         output_path = tmp_path / "config.yaml"
         content = client.download_file(
-            "test/repo", "main", "config.yaml", output_path=output_path, env_vars=env_vars
+            "test/repo",
+            "main",
+            "config.yaml",
+            output_path=output_path,
+            env_vars=env_vars,
         )
-        
+
         expected = b"repo: awesome-checkout-action\nversion: Super Checkout V5"
         assert content == expected
-        
+
         # Verify file was saved
         assert output_path.exists()
         saved_content = output_path.read_bytes()
@@ -225,17 +234,17 @@ class TestGitHubClient:
         client = GitHubClient()
         content = b"test content"
         output_path = tmp_path / "subdir" / "test.txt"
-        
+
         # Directory doesn't exist yet
         assert not output_path.parent.exists()
-        
+
         client._save_file(content, output_path)
-        
+
         # Directory should be created and file should exist
         assert output_path.exists()
         assert output_path.read_bytes() == content
 
-    @responses.activate  
+    @responses.activate
     def test_download_file_url_encoding(self) -> None:
         """Test file download with special characters in path."""
         responses.add(
@@ -246,7 +255,9 @@ class TestGitHubClient:
         )
 
         client = GitHubClient()
-        content = client.download_file("owner/repo", "main", "path with spaces/file.txt")
+        content = client.download_file(
+            "owner/repo", "main", "path with spaces/file.txt"
+        )
         assert content == b"content"
 
     def test_timeout_configuration(self) -> None:

@@ -15,7 +15,7 @@ class TestCLI:
         """Test argument parsing with default values."""
         parser = create_parser()
         args = parser.parse_args([])
-        
+
         assert args.config == Path(".github/repo-file-sync.yaml")
         assert args.output == Path("./synced-files")
         assert args.verbose is False
@@ -25,14 +25,18 @@ class TestCLI:
     def test_parse_args_all_options(self) -> None:
         """Test argument parsing with all options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "--config", "custom-config.yaml",
-            "--output", "custom-output",
-            "--verbose",
-            "--dry-run",
-            "--test-connection"
-        ])
-        
+        args = parser.parse_args(
+            [
+                "--config",
+                "custom-config.yaml",
+                "--output",
+                "custom-output",
+                "--verbose",
+                "--dry-run",
+                "--test-connection",
+            ]
+        )
+
         assert args.config == Path("custom-config.yaml")
         assert args.output == Path("custom-output")
         assert args.verbose is True
@@ -42,25 +46,23 @@ class TestCLI:
     def test_parse_args_short_options(self) -> None:
         """Test argument parsing with short options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "-c", "config.yaml",
-            "-o", "output",
-            "-v"
-        ])
-        
+        args = parser.parse_args(["-c", "config.yaml", "-o", "output", "-v"])
+
         assert args.config == Path("config.yaml")
         assert args.output == Path("output")
         assert args.verbose is True
 
     @patch("src.cli.RepoFileSync")
     @patch("src.cli.load_config")
-    def test_main_successful_sync(self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path) -> None:
+    def test_main_successful_sync(
+        self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path
+    ) -> None:
         """Test successful main execution."""
         # Mock configuration
         mock_config = {
             "envs": [{"name": "TEST_VAR", "value": "test_value"}],
             "envs_file": "envs.yaml",
-            "sources": [{"repo": "test/repo", "ref": "main", "files": ["README.md"]}]
+            "sources": [{"repo": "test/repo", "ref": "main", "files": ["README.md"]}],
         }
         mock_load_config.return_value = mock_config
 
@@ -76,7 +78,10 @@ class TestCLI:
         config_file.write_text("test config", encoding="utf-8")
 
         # Test successful execution
-        with patch("sys.argv", ["repo-file-sync", "--config", str(config_file), "--output", str(tmp_path)]):
+        with patch(
+            "sys.argv",
+            ["repo-file-sync", "--config", str(config_file), "--output", str(tmp_path)],
+        ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -115,12 +120,14 @@ class TestCLI:
 
     @patch("src.cli.RepoFileSync")
     @patch("src.cli.load_config")
-    def test_main_sync_error(self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path) -> None:
+    def test_main_sync_error(
+        self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path
+    ) -> None:
         """Test main execution when sync fails."""
         mock_config = {
             "envs": [],
             "envs_file": "envs.yaml",
-            "sources": [{"repo": "test/repo", "ref": "main", "files": ["README.md"]}]
+            "sources": [{"repo": "test/repo", "ref": "main", "files": ["README.md"]}],
         }
         mock_load_config.return_value = mock_config
 
@@ -141,12 +148,14 @@ class TestCLI:
 
     @patch("src.cli.RepoFileSync")
     @patch("src.cli.load_config")
-    def test_main_dry_run(self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path) -> None:
+    def test_main_dry_run(
+        self, mock_load_config: Mock, mock_sync_class: Mock, tmp_path: Path
+    ) -> None:
         """Test main execution in dry-run mode."""
         mock_config = {
             "envs": [{"name": "TEST", "value": "value"}],
             "envs_file": "envs.yaml",
-            "sources": [{"repo": "test/repo", "ref": "main", "files": ["test.txt"]}]
+            "sources": [{"repo": "test/repo", "ref": "main", "files": ["test.txt"]}],
         }
         mock_load_config.return_value = mock_config
 
@@ -159,7 +168,9 @@ class TestCLI:
         config_file = tmp_path / "config.yaml"
         config_file.write_text("test", encoding="utf-8")
 
-        with patch("sys.argv", ["repo-file-sync", "--config", str(config_file), "--dry-run"]):
+        with patch(
+            "sys.argv", ["repo-file-sync", "--config", str(config_file), "--dry-run"]
+        ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0

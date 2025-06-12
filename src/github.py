@@ -38,10 +38,10 @@ class GitHubClient:
         self.timeout = timeout
         self.token = token or os.getenv("GITHUB_TOKEN")
         self.session = requests.Session()
-        
+
         # Set user agent for proper API usage
         self.session.headers.update({"User-Agent": "actions-repo-file-sync/2.0.0"})
-        
+
         # Add authorization header if token is available
         if self.token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
@@ -85,15 +85,15 @@ class GitHubClient:
             5432
         """
         logger.info(f"Downloading {repo}:{ref}:{file_path}")
-        
+
         # Try raw.githubusercontent.com first (works for public repos and private with token)
         content = self._download_via_raw_url(repo, ref, file_path)
-        
+
         # If raw URL fails and we have a token, try GitHub API
         if content is None and self.token:
             logger.debug("Raw URL failed, trying GitHub API")
             content = self._download_via_api(repo, ref, file_path)
-        
+
         if content is None:
             raise FileNotFoundError(f"File not found: {repo}:{ref}:{file_path}")
 
@@ -140,14 +140,16 @@ class GitHubClient:
             logger.error(f"Failed to save file to {output_path}: {e}")
             raise
 
-    def _download_via_raw_url(self, repo: str, ref: str, file_path: str) -> Optional[bytes]:
+    def _download_via_raw_url(
+        self, repo: str, ref: str, file_path: str
+    ) -> Optional[bytes]:
         """Download file using raw.githubusercontent.com endpoint.
-        
+
         Args:
             repo: Repository in format 'owner/repo'
             ref: Git reference
             file_path: Path to file in repository
-            
+
         Returns:
             File content as bytes, or None if download fails
         """
@@ -155,25 +157,25 @@ class GitHubClient:
             # URL encode the file path to handle spaces and special characters
             encoded_file_path = quote(file_path, safe="/")
             url = f"{self.BASE_URL}/{repo}/{ref}/{encoded_file_path}"
-            
+
             logger.debug(f"Trying raw URL: {url}")
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
-            
+
             return response.content
-            
+
         except requests.exceptions.RequestException as e:
             logger.debug(f"Raw URL download failed: {e}")
             return None
 
     def _download_via_api(self, repo: str, ref: str, file_path: str) -> Optional[bytes]:
         """Download file using GitHub API endpoint.
-        
+
         Args:
             repo: Repository in format 'owner/repo'
             ref: Git reference
             file_path: Path to file in repository
-            
+
         Returns:
             File content as bytes, or None if download fails
         """
@@ -181,15 +183,15 @@ class GitHubClient:
             # URL encode the file path to handle spaces and special characters
             encoded_file_path = quote(file_path, safe="/")
             url = f"{self.API_URL}/repos/{repo}/contents/{encoded_file_path}"
-            
+
             params = {"ref": ref}
             logger.debug(f"Trying API URL: {url} with ref={ref}")
-            
+
             response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-            
+
             data = response.json()
-            
+
             # GitHub API returns base64-encoded content
             if data.get("encoding") == "base64":
                 content = base64.b64decode(data["content"])
@@ -197,7 +199,7 @@ class GitHubClient:
             else:
                 logger.error(f"Unexpected encoding: {data.get('encoding')}")
                 return None
-                
+
         except requests.exceptions.RequestException as e:
             logger.debug(f"API download failed: {e}")
             return None

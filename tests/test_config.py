@@ -37,13 +37,13 @@ def test_load_config_with_envs_file(tmp_path: Path) -> None:
 
     # Load and verify config
     config = load_config(config_file)
-    
+
     assert len(config["envs"]) == 2
     assert config["envs"][0]["name"] == "TEST_VAR"
     assert config["envs"][0]["value"] == "test_value"
     assert config["envs"][1]["name"] == "ANOTHER_VAR"
     assert config["envs"][1]["value"] == "another_value"
-    
+
     assert len(config["sources"]) == 1
     assert config["sources"][0]["repo"] == "owner/repo"
     assert config["sources"][0]["ref"] == "main"
@@ -139,7 +139,7 @@ def test_load_config_with_relative_envs_file(tmp_path: Path) -> None:
 
     # Load and verify config
     config = load_config(config_file)
-    
+
     assert len(config["envs"]) == 1
     assert config["envs"][0]["name"] == "REL_VAR"
     assert config["envs"][0]["value"] == "relative_value"

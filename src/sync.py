@@ -90,7 +90,9 @@ class RepoFileSync:
             timeout: Request timeout in seconds
             github_token: Optional GitHub token for private repository access
         """
-        self.github_client = github_client or GitHubClient(timeout=timeout, token=github_token)
+        self.github_client = github_client or GitHubClient(
+            timeout=timeout, token=github_token
+        )
         self._owns_client = github_client is None
 
     def sync(
