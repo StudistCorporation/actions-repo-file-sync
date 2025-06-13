@@ -248,7 +248,7 @@ def main() -> None:
                         args.branch_name,
                         args.pr_title,
                         args.pr_body,
-                        result.synced_files,
+                        result.successful_files,
                         args.timeout,
                     )
                     if not pr_created:
