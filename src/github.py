@@ -427,6 +427,21 @@ class GitHubClient:
             else:
                 logger.info(f"Git directory: {git_check.stdout.strip()}")
             
+            # Check current branch and available branches
+            current_branch_result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Current branch: {current_branch_result.stdout.strip()}")
+            
+            all_branches_result = subprocess.run(
+                ["git", "branch", "-a"],
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Available branches: {all_branches_result.stdout.strip()}")
+            
             # Configure git user
             subprocess.run(
                 ["git", "config", "user.name", "actions-repo-file-sync"],
@@ -454,10 +469,21 @@ class GitHubClient:
                 )
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
-                # Branch doesn't exist, create new one from base branch
-                logger.info(f"Creating new branch {branch_name} from {base_branch}")
+                # Branch doesn't exist, create new one from current branch
+                # Get current branch name as fallback
+                current_branch_result = subprocess.run(
+                    ["git", "branch", "--show-current"],
+                    capture_output=True,
+                    text=True,
+                )
+                current_branch = current_branch_result.stdout.strip()
+                
+                # Use current branch if base_branch doesn't exist
+                actual_base = current_branch if current_branch else base_branch
+                logger.info(f"Creating new branch {branch_name} from {actual_base}")
+                
                 subprocess.run(
-                    ["git", "checkout", "-b", branch_name, base_branch],
+                    ["git", "checkout", "-b", branch_name],  # Create from current HEAD
                     check=True,
                     capture_output=True,
                 )
