@@ -34,15 +34,15 @@ if [[ "${INPUT_CREATE_PR:-false}" == "true" ]]; then
 fi
 
 if [[ -n "${INPUT_PR_TITLE:-}" ]]; then
-    PR_TITLE="--pr-title"
+    PR_TITLE="--pr-title ${INPUT_PR_TITLE}"
 fi
 
 if [[ -n "${INPUT_PR_BODY:-}" ]]; then
-    PR_BODY="--pr-body"
+    PR_BODY="--pr-body ${INPUT_PR_BODY}"
 fi
 
 if [[ -n "${INPUT_BRANCH_NAME:-}" ]]; then
-    BRANCH_NAME="--branch-name"
+    BRANCH_NAME="--branch-name ${INPUT_BRANCH_NAME}"
 fi
 
 # Override with command line arguments if provided
@@ -61,15 +61,15 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --pr-title)
-            PR_TITLE="--pr-title"
+            PR_TITLE="--pr-title $2"
             shift 2
             ;;
         --pr-body)
-            PR_BODY="--pr-body"
+            PR_BODY="--pr-body $2"
             shift 2
             ;;
         --branch-name)
-            BRANCH_NAME="--branch-name"
+            BRANCH_NAME="--branch-name $2"
             shift 2
             ;;
         *)
@@ -120,16 +120,16 @@ if [[ -n "${CREATE_PR}" ]]; then
     CMD+=("${CREATE_PR}")
 fi
 
-if [[ -n "${PR_TITLE}" && -n "${INPUT_PR_TITLE:-}" ]]; then
-    CMD+=("${PR_TITLE}" "${INPUT_PR_TITLE}")
+if [[ -n "${PR_TITLE}" ]]; then
+    CMD+=("${PR_TITLE}")
 fi
 
-if [[ -n "${PR_BODY}" && -n "${INPUT_PR_BODY:-}" ]]; then
-    CMD+=("${PR_BODY}" "${INPUT_PR_BODY}")
+if [[ -n "${PR_BODY}" ]]; then
+    CMD+=("${PR_BODY}")
 fi
 
-if [[ -n "${BRANCH_NAME}" && -n "${INPUT_BRANCH_NAME:-}" ]]; then
-    CMD+=("${BRANCH_NAME}" "${INPUT_BRANCH_NAME}")
+if [[ -n "${BRANCH_NAME}" ]]; then
+    CMD+=("${BRANCH_NAME}")
 fi
 
 # Run the sync command and capture output

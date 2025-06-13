@@ -48,6 +48,48 @@ class GitHubClient:
             self.session.headers.update({"Authorization": f"token {self.token}"})
             logger.debug("GitHub token configured for private repository access")
 
+        # Flag to track if git has been configured
+        self._git_configured = False
+
+    def _setup_git_config(self) -> None:
+        """Set up git configuration once per session.
+
+        This method configures git user settings and safe directory permissions.
+        It's called automatically when git operations are needed.
+        """
+        if self._git_configured:
+            return
+
+        try:
+            import os
+
+            logger.info(f"Setting up git configuration for directory: {os.getcwd()}")
+
+            # Add current directory as safe for git operations (fix ownership issue)
+            subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", os.getcwd()],
+                capture_output=True,
+            )
+
+            # Configure git user
+            subprocess.run(
+                ["git", "config", "user.name", "actions-repo-file-sync"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "action@github.com"],
+                check=True,
+                capture_output=True,
+            )
+
+            self._git_configured = True
+            logger.info("Git configuration completed successfully")
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to configure git: {e}")
+            raise
+
     def download_file(
         self,
         repo: str,
@@ -349,30 +391,56 @@ class GitHubClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to create pull request: {e}")
             # Log more details for debugging
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 try:
                     error_details = e.response.json()
                     logger.error(f"GitHub API error details: {error_details}")
-                    
-                    # Check if PR already exists
-                    if (error_details.get('message') == 'Validation Failed' and 
-                        any('pull request already exists' in str(error.get('message', '')) 
-                            for error in error_details.get('errors', []))):
-                        logger.info("Pull request already exists - this is expected behavior when updating an existing PR")
+
+                    # Check if PR already exists (more flexible error detection)
+                    error_message = str(error_details.get("message", "")).lower()
+                    error_details_list = error_details.get("errors", [])
+
+                    # Multiple conditions to detect existing PR error
+                    pr_exists_indicators = [
+                        "validation failed" in error_message,
+                        any(
+                            "pull request already exists"
+                            in str(error.get("message", "")).lower()
+                            for error in error_details_list
+                        ),
+                        any(
+                            "already exists" in str(error.get("message", "")).lower()
+                            for error in error_details_list
+                        ),
+                        any(
+                            "head sha" in str(error.get("message", "")).lower()
+                            for error in error_details_list
+                        ),
+                    ]
+
+                    if any(pr_exists_indicators):
+                        logger.info(
+                            "Pull request already exists - this is expected behavior when updating an existing PR"
+                        )
                         # Try to get the existing PR URL
                         try:
                             list_url = f"{self.API_URL}/repos/{repo}/pulls?head={repo.split('/')[0]}:{head_branch}"
-                            list_response = self.session.get(list_url, timeout=self.timeout)
+                            list_response = self.session.get(
+                                list_url, timeout=self.timeout
+                            )
                             list_response.raise_for_status()
                             prs = list_response.json()
                             if prs:
                                 existing_pr_url = prs[0]["html_url"]
-                                logger.info(f"Existing pull request updated: {existing_pr_url}")
+                                logger.info(
+                                    f"Existing pull request updated: {existing_pr_url}"
+                                )
                                 return existing_pr_url
                         except Exception as ex:
                             logger.warning(f"Could not get existing PR URL: {ex}")
                         return f"https://github.com/{repo}/pulls"  # Return generic PR list URL
-                except:
+                except Exception as parse_error:
+                    logger.error(f"Failed to parse error response: {parse_error}")
                     logger.error(f"Response content: {e.response.text}")
             return None
         except (KeyError, ValueError) as e:
@@ -400,22 +468,22 @@ class GitHubClient:
         try:
             url = f"{self.API_URL}/repos/{repo}/pulls/{pr_number}/requested_reviewers"
             data = {}
-            
+
             if reviewers:
                 data["reviewers"] = reviewers
             if team_reviewers:
                 data["team_reviewers"] = team_reviewers
-            
+
             if not data:
                 return True  # Nothing to add
-            
+
             logger.info(f"Adding reviewers to PR #{pr_number}: {data}")
             response = self.session.post(url, json=data, timeout=self.timeout)
             response.raise_for_status()
-            
+
             logger.info(f"Successfully added reviewers to PR #{pr_number}")
             return True
-            
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to add reviewers to PR #{pr_number}: {e}")
             return False
@@ -431,16 +499,14 @@ class GitHubClient:
             True if successful, False otherwise
         """
         try:
+            # Set up git configuration if not already done
+            self._setup_git_config()
+
             # Debug: Check if we're in a git repository
             import os
+
             logger.info(f"Current working directory for git operations: {os.getcwd()}")
-            
-            # Add current directory as safe for git operations (fix ownership issue)
-            subprocess.run(
-                ["git", "config", "--global", "--add", "safe.directory", os.getcwd()],
-                capture_output=True,
-            )
-            
+
             # Check if this is a git repository
             git_check = subprocess.run(
                 ["git", "rev-parse", "--git-dir"],
@@ -452,7 +518,7 @@ class GitHubClient:
                 return False
             else:
                 logger.info(f"Git directory: {git_check.stdout.strip()}")
-            
+
             # Check current branch and available branches
             current_branch_result = subprocess.run(
                 ["git", "branch", "--show-current"],
@@ -460,29 +526,19 @@ class GitHubClient:
                 text=True,
             )
             logger.info(f"Current branch: {current_branch_result.stdout.strip()}")
-            
+
             all_branches_result = subprocess.run(
                 ["git", "branch", "-a"],
                 capture_output=True,
                 text=True,
             )
             logger.info(f"Available branches: {all_branches_result.stdout.strip()}")
-            
-            # Configure git user
-            subprocess.run(
-                ["git", "config", "user.name", "actions-repo-file-sync"],
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "action@github.com"],
-                check=True,
-                capture_output=True,
-            )
 
             # Try to fetch existing branch first (like TypeScript version)
             try:
-                logger.info(f"Attempting to fetch and checkout existing branch: {branch_name}")
+                logger.info(
+                    f"Attempting to fetch and checkout existing branch: {branch_name}"
+                )
                 subprocess.run(
                     ["git", "fetch", "origin", branch_name],
                     check=True,
@@ -497,7 +553,7 @@ class GitHubClient:
             except subprocess.CalledProcessError:
                 # Branch doesn't exist, create new one from base_branch (usually main)
                 logger.info(f"Creating new branch {branch_name} from {base_branch}")
-                
+
                 # First, ensure we have the latest base branch
                 try:
                     subprocess.run(
@@ -508,7 +564,7 @@ class GitHubClient:
                     logger.info(f"Fetched latest {base_branch} from origin")
                 except subprocess.CalledProcessError as e:
                     logger.warning(f"Failed to fetch {base_branch}: {e}")
-                
+
                 # Create new branch from base_branch
                 try:
                     subprocess.run(
@@ -516,7 +572,9 @@ class GitHubClient:
                         check=True,
                         capture_output=True,
                     )
-                    logger.info(f"Successfully created new branch {branch_name} from origin/{base_branch}")
+                    logger.info(
+                        f"Successfully created new branch {branch_name} from origin/{base_branch}"
+                    )
                 except subprocess.CalledProcessError:
                     # Fallback: create from local base_branch or current HEAD
                     subprocess.run(
@@ -524,7 +582,9 @@ class GitHubClient:
                         check=True,
                         capture_output=True,
                     )
-                    logger.info(f"Successfully created new branch {branch_name} from current HEAD")
+                    logger.info(
+                        f"Successfully created new branch {branch_name} from current HEAD"
+                    )
 
             return True
 
@@ -565,7 +625,7 @@ class GitHubClient:
                     check=True,
                     capture_output=True,
                 )
-                
+
                 # Remove __pycache__ files from staging if they were added
                 try:
                     subprocess.run(
@@ -589,16 +649,16 @@ class GitHubClient:
             if not changed_files:
                 logger.info("No changes detected to commit")
                 return True  # Return True to allow PR creation workflow to continue
-            
+
             logger.info(f"Changes detected in files: {changed_files}")
-            
+
             # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
             subprocess.run(
                 ["git", "add", "."],
                 check=True,
                 capture_output=True,
             )
-            
+
             # Remove __pycache__ files from staging before commit
             try:
                 subprocess.run(
@@ -651,6 +711,6 @@ class GitHubClient:
         # Create branch
         if not self.create_branch(branch_name):
             return False
-        
+
         # Add files and push (pass None to use TypeScript-style "add all" behavior)
         return self.add_files_and_push(branch_name, commit_message, None)

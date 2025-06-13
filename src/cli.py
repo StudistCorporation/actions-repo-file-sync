@@ -152,7 +152,7 @@ def create_pull_request(
         True if PR was created successfully, False otherwise
     """
     logger = logging.getLogger(__name__)
-    
+
     # Get repository info from environment
     github_repository = os.getenv("GITHUB_REPOSITORY")
     if not github_repository:
@@ -163,19 +163,22 @@ def create_pull_request(
     github_workspace = os.getenv("GITHUB_WORKSPACE", os.getcwd())
     logger.info(f"GitHub workspace: {github_workspace}")
     logger.info(f"Current working directory: {os.getcwd()}")
-    
+
     # Change to GitHub workspace directory for Git operations
     original_cwd = os.getcwd()
     os.chdir(github_workspace)
     logger.info(f"Changed working directory to: {os.getcwd()}")
 
     commit_message = pr_title
-    
-    # Prepare list of files to add - use relative path from workspace
+
+    # Prepare list of paths to add - use relative path from workspace
+    # Note: This adds the entire output directory and its contents
     output_relative = os.path.relpath(output_dir, github_workspace)
-    files_to_add = [output_relative]  # Add the output directory relative to workspace
+    files_to_add = [
+        output_relative
+    ]  # Add the output directory (and all contents) relative to workspace
     logger.info(f"Files to add: {files_to_add}")
-    
+
     try:
         with GitHubClient(timeout=timeout) as client:
             # Setup git and push changes
@@ -190,16 +193,16 @@ def create_pull_request(
                 pr_body,
                 branch_name,
             )
-            
+
             if pr_url:
                 logger.info(f"Pull request created: {pr_url}")
                 success = True
             else:
                 logger.error("Failed to create pull request")
                 success = False
-    
+
         return success
-    
+
     finally:
         # Always restore original working directory
         os.chdir(original_cwd)
@@ -255,11 +258,13 @@ def main() -> None:
             logger.info(f"✓ Sync completed successfully: {result}")
             if not args.dry_run:
                 logger.info(f"Files saved to: {args.output.absolute()}")
-                
+
                 # Debug: Log the create_pr value
-                logger.info(f"DEBUG: args.create_pr = {args.create_pr}, type = {type(args.create_pr)}")
+                logger.info(
+                    f"DEBUG: args.create_pr = {args.create_pr}, type = {type(args.create_pr)}"
+                )
                 logger.info(f"DEBUG: args.dry_run = {args.dry_run}")
-                
+
                 # Create pull request if requested
                 if args.create_pr:
                     logger.info("Creating pull request...")
