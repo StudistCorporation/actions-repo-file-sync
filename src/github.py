@@ -540,12 +540,24 @@ class GitHubClient:
                         capture_output=True,
                     )
             else:
-                # Add all files (TypeScript pattern: git add -N .)
+                # Add all files excluding __pycache__ directories (TypeScript pattern: git add -N .)
                 subprocess.run(
                     ["git", "add", "-N", "."],
                     check=True,
                     capture_output=True,
                 )
+                
+                # Remove __pycache__ files from staging if they were added
+                try:
+                    subprocess.run(
+                        ["git", "reset", "HEAD", "*/__pycache__/*"],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info("Removed __pycache__ files from staging")
+                except subprocess.CalledProcessError:
+                    # No __pycache__ files to remove, which is fine
+                    pass
 
             # Check if there are changes using git diff --name-only (like TypeScript)
             result = subprocess.run(
@@ -561,12 +573,24 @@ class GitHubClient:
             
             logger.info(f"Changes detected in files: {changed_files}")
             
-            # Add all changes and commit (like TypeScript: git add .)
+            # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
             subprocess.run(
                 ["git", "add", "."],
                 check=True,
                 capture_output=True,
             )
+            
+            # Remove __pycache__ files from staging before commit
+            try:
+                subprocess.run(
+                    ["git", "reset", "HEAD", "*/__pycache__/*"],
+                    check=True,
+                    capture_output=True,
+                )
+                logger.info("Removed __pycache__ files from final staging")
+            except subprocess.CalledProcessError:
+                # No __pycache__ files to remove, which is fine
+                pass
 
             # Commit changes
             subprocess.run(
