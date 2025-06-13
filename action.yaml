@@ -1,33 +1,59 @@
-name: Repo File Sync
-description: 'Synchronize files from repositories'
+name: 'Repo File Sync'
+description: 'Synchronize files from GitHub repositories with environment variable substitution'
 author: 'Studist Corporation'
 
 branding:
-  icon: download
-  color: orange
+  icon: 'download'
+  color: 'blue'
 
 inputs:
-  token:
-    description: 'The `token` to used for authenticating with GitHub.'
-  username:
-    description: 'The `username` to use in the git commit.'
-  email:
-    description: 'The `email` to use in the git commit.'
-  reviewers:
+  config:
+    description: 'Path to the configuration YAML file'
     required: false
-    description: 'The `reviewers` to use in the pull request to be created.'
-  team_reviewers:
+    default: '.github/repo-file-sync.yaml'
+  
+  github-token:
+    description: 'GitHub token for private repository access'
     required: false
-    description: 'The `team_reviewers` to use in the pull request to be created.'
-  work_ref:
+    default: ${{ github.token }}
+  
+  dry-run:
+    description: 'Show what would be downloaded without actually downloading'
     required: false
-    description : 'The `work_ref` to use in a branch for the pull request to be created.'
-  pr_search_range:
-    description: 'The `pr_search_rang` to use in the pull request comment to search related PRs with git log --since option'
+    default: 'false'
+  
+  create-pr:
+    description: 'Create a pull request with the synced files'
     required: false
-    default: 'yesterday'
+    default: 'false'
+  
+  pr-title:
+    description: 'Title for the pull request'
+    required: false
+    default: '🔄 Sync files from repositories'
+  
+  pr-body:
+    description: 'Body for the pull request'
+    required: false
+    default: 'Automated file sync from configured repositories'
+  
+  branch-name:
+    description: 'Branch name for the pull request'
+    required: false
+    default: 'sync/repo-files'
 
+outputs:
+  files-synced:
+    description: 'List of synced files in format: repo:file,repo:file'
 
 runs:
-  using: node16
-  main: dist/index.js
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    GITHUB_TOKEN: ${{ inputs.github-token }}
+    INPUT_CONFIG: ${{ inputs.config }}
+    INPUT_DRY_RUN: ${{ inputs.dry-run }}
+    INPUT_CREATE_PR: ${{ inputs.create-pr }}
+    INPUT_PR_TITLE: ${{ inputs.pr-title }}
+    INPUT_PR_BODY: ${{ inputs.pr-body }}
+    INPUT_BRANCH_NAME: ${{ inputs.branch-name }}

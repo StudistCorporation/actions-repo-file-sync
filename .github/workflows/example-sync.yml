@@ -1,0 +1,85 @@
+# Example workflow for using repo-file-sync action with PR creation
+name: Example File Sync with PR
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode'
+        required: false
+        default: false
+        type: boolean
+      create-pr:
+        description: 'Create pull request'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  sync-files:
+    runs-on: ubuntu-latest
+    name: Sync repository files and create PR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync files and create PR
+        uses: ./
+        with:
+          config: '.github/repo-file-sync.yaml'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          dry-run: false
+          create-pr: true
+          pr-title: '🔄 Weekly sync: Update shared files'
+          pr-body: |
+            ## 📁 Automated File Sync
+            
+            This PR contains updates from configured source repositories.
+            
+            ### 🔍 Details
+            - **Triggered by**: ${{ github.event_name }}
+            - **Actor**: @${{ github.actor }}
+            - **Workflow**: ${{ github.workflow }}
+            
+            ### 📋 Review Checklist
+            - [ ] Verify file changes are expected
+            - [ ] Check for any breaking changes
+            - [ ] Confirm environment variable substitutions
+            
+            ---
+            🤖 *This PR was created automatically by the repo-file-sync action*
+          branch-name: 'repo-file-sync'
+        id: file-sync
+
+      - name: Display sync results
+        run: |
+          echo "📊 Sync Results:"
+          echo "✅ Files synced: ${{ steps.file-sync.outputs.files-synced }}"
+          if [ "${{ github.event.inputs.create-pr || 'true' }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "🔄 PR creation requested"
+          else
+            echo "📝 Files synced without PR creation"
+          fi
+
+      - name: Create summary
+        run: |
+          echo "## 📋 File Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Files synced:** ${{ steps.file-sync.outputs.files-synced }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry run mode:** ${{ github.event.inputs.dry-run || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Create PR:** ${{ github.event.inputs.create-pr || 'true' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** repo-file-sync" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.file-sync.outputs.files-synced }}" ]; then
+            echo "✅ Files synced successfully!" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event.inputs.create-pr || 'true' }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+              echo "🔄 Pull request created or updated" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ No files were synced." >> $GITHUB_STEP_SUMMARY
+          fi
