@@ -409,6 +409,12 @@ class GitHubClient:
             import os
             logger.info(f"Current working directory for git operations: {os.getcwd()}")
             
+            # Add current directory as safe for git operations (fix ownership issue)
+            subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", os.getcwd()],
+                capture_output=True,
+            )
+            
             # Check if this is a git repository
             git_check = subprocess.run(
                 ["git", "rev-parse", "--git-dir"],
