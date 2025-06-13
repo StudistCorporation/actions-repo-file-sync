@@ -348,6 +348,13 @@ class GitHubClient:
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to create pull request: {e}")
+            # Log more details for debugging
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details = e.response.json()
+                    logger.error(f"GitHub API error details: {error_details}")
+                except:
+                    logger.error(f"Response content: {e.response.text}")
             return None
         except (KeyError, ValueError) as e:
             logger.error(f"Failed to parse pull request response: {e}")
@@ -469,25 +476,36 @@ class GitHubClient:
                 )
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
-                # Branch doesn't exist, create new one from current branch
-                # Get current branch name as fallback
-                current_branch_result = subprocess.run(
-                    ["git", "branch", "--show-current"],
-                    capture_output=True,
-                    text=True,
-                )
-                current_branch = current_branch_result.stdout.strip()
+                # Branch doesn't exist, create new one from base_branch (usually main)
+                logger.info(f"Creating new branch {branch_name} from {base_branch}")
                 
-                # Use current branch if base_branch doesn't exist
-                actual_base = current_branch if current_branch else base_branch
-                logger.info(f"Creating new branch {branch_name} from {actual_base}")
+                # First, ensure we have the latest base branch
+                try:
+                    subprocess.run(
+                        ["git", "fetch", "origin", base_branch],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info(f"Fetched latest {base_branch} from origin")
+                except subprocess.CalledProcessError as e:
+                    logger.warning(f"Failed to fetch {base_branch}: {e}")
                 
-                subprocess.run(
-                    ["git", "checkout", "-b", branch_name],  # Create from current HEAD
-                    check=True,
-                    capture_output=True,
-                )
-                logger.info(f"Successfully created new branch: {branch_name}")
+                # Create new branch from base_branch
+                try:
+                    subprocess.run(
+                        ["git", "checkout", "-b", branch_name, f"origin/{base_branch}"],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info(f"Successfully created new branch {branch_name} from origin/{base_branch}")
+                except subprocess.CalledProcessError:
+                    # Fallback: create from local base_branch or current HEAD
+                    subprocess.run(
+                        ["git", "checkout", "-b", branch_name],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info(f"Successfully created new branch {branch_name} from current HEAD")
 
             return True
 
