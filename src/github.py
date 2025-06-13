@@ -405,6 +405,22 @@ class GitHubClient:
             True if successful, False otherwise
         """
         try:
+            # Debug: Check if we're in a git repository
+            import os
+            logger.info(f"Current working directory for git operations: {os.getcwd()}")
+            
+            # Check if this is a git repository
+            git_check = subprocess.run(
+                ["git", "rev-parse", "--git-dir"],
+                capture_output=True,
+                text=True,
+            )
+            if git_check.returncode != 0:
+                logger.error(f"Not a git repository: {git_check.stderr}")
+                return False
+            else:
+                logger.info(f"Git directory: {git_check.stdout.strip()}")
+            
             # Configure git user
             subprocess.run(
                 ["git", "config", "user.name", "actions-repo-file-sync"],

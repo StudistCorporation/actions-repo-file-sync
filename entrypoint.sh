@@ -91,6 +91,13 @@ log "DEBUG: INPUT_CREATE_PR=${INPUT_CREATE_PR:-NOT_SET}"
 log "DEBUG: INPUT_DRY_RUN=${INPUT_DRY_RUN:-NOT_SET}"
 log "DEBUG: CREATE_PR flag=${CREATE_PR}"
 
+# Change to GitHub workspace directory
+cd /github/workspace || {
+    log "Error: Could not change to GitHub workspace directory"
+    exit 1
+}
+log "Changed to workspace directory: $(pwd)"
+
 # Check if config file exists
 if [[ ! -f "${CONFIG_FILE}" ]]; then
     log "Error: Configuration file not found: ${CONFIG_FILE}"
