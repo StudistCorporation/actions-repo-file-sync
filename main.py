@@ -9,13 +9,25 @@ from src.cli import main
 
 def main_with_env_parsing() -> None:
     """Main entry point that handles GitHub Actions environment variables."""
+    import logging
+    
+    # Setup basic logging to ensure debug messages appear
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger(__name__)
+    
     # Debug: Print environment variables
+    logger.info(f"DEBUG: INPUT_CREATE_PR = {os.getenv('INPUT_CREATE_PR', 'NOT_SET')}")
+    logger.info(f"DEBUG: INPUT_DRY_RUN = {os.getenv('INPUT_DRY_RUN', 'NOT_SET')}")
     print(f"DEBUG: INPUT_CREATE_PR = {os.getenv('INPUT_CREATE_PR', 'NOT_SET')}")
     print(f"DEBUG: INPUT_DRY_RUN = {os.getenv('INPUT_DRY_RUN', 'NOT_SET')}")
     
     # Parse GitHub Actions environment variables
-    if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
+    create_pr_env = os.getenv("INPUT_CREATE_PR", "false").lower()
+    logger.info(f"DEBUG: create_pr_env = {create_pr_env}")
+    
+    if create_pr_env == "true":
         os.environ.setdefault("CREATE_PR", "true")
+        logger.info("DEBUG: Set CREATE_PR environment variable")
     if os.getenv("INPUT_PR_TITLE"):
         os.environ.setdefault("PR_TITLE", os.getenv("INPUT_PR_TITLE"))
     if os.getenv("INPUT_PR_BODY"):
@@ -27,8 +39,9 @@ def main_with_env_parsing() -> None:
     import sys
     
     # Add PR-related arguments if set
-    if os.getenv("INPUT_CREATE_PR", "false").lower() == "true":
+    if create_pr_env == "true":
         sys.argv.append("--create-pr")
+        logger.info("DEBUG: Added --create-pr to sys.argv")
     
     if os.getenv("INPUT_PR_TITLE"):
         sys.argv.extend(["--pr-title", os.getenv("INPUT_PR_TITLE")])
@@ -46,6 +59,7 @@ def main_with_env_parsing() -> None:
         sys.argv.append("--dry-run")
     
     # Debug: Print final sys.argv
+    logger.info(f"DEBUG: Final sys.argv = {sys.argv}")
     print(f"DEBUG: Final sys.argv = {sys.argv}")
     
     main()
