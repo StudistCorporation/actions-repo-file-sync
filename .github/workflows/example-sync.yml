@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "📊 Sync Results:"
           echo "✅ Files synced: ${{ steps.file-sync.outputs.files-synced }}"
-          if [ "${{ github.event.inputs.create-pr }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event.inputs.create-pr || 'true' }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             echo "🔄 PR creation requested"
           else
             echo "📝 Files synced without PR creation"
@@ -77,7 +77,7 @@ jobs:
           
           if [ -n "${{ steps.file-sync.outputs.files-synced }}" ]; then
             echo "✅ Files synced successfully!" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ github.event.inputs.create-pr }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.inputs.create-pr || 'true' }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
               echo "🔄 Pull request created or updated" >> $GITHUB_STEP_SUMMARY
             fi
           else
