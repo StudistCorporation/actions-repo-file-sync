@@ -159,31 +159,51 @@ def create_pull_request(
         logger.error("GITHUB_REPOSITORY environment variable not set")
         return False
 
+    # Get GitHub workspace directory
+    github_workspace = os.getenv("GITHUB_WORKSPACE", os.getcwd())
+    logger.info(f"GitHub workspace: {github_workspace}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    
+    # Change to GitHub workspace directory for Git operations
+    original_cwd = os.getcwd()
+    os.chdir(github_workspace)
+    logger.info(f"Changed working directory to: {os.getcwd()}")
+
     commit_message = pr_title
     
-    # Prepare list of files to add
-    files_to_add = [str(output_dir)]  # Add the entire output directory
+    # Prepare list of files to add - use relative path from workspace
+    output_relative = os.path.relpath(output_dir, github_workspace)
+    files_to_add = [output_relative]  # Add the output directory relative to workspace
+    logger.info(f"Files to add: {files_to_add}")
     
-    with GitHubClient(timeout=timeout) as client:
-        # Setup git and push changes
-        if not client.setup_git_and_push(branch_name, commit_message, files_to_add):
-            logger.error("Failed to setup git and push changes")
-            return False
+    try:
+        with GitHubClient(timeout=timeout) as client:
+            # Setup git and push changes
+            if not client.setup_git_and_push(branch_name, commit_message, files_to_add):
+                logger.error("Failed to setup git and push changes")
+                return False
 
-        # Create pull request
-        pr_url = client.create_pull_request(
-            github_repository,
-            pr_title,
-            pr_body,
-            branch_name,
-        )
-        
-        if pr_url:
-            logger.info(f"Pull request created: {pr_url}")
-            return True
-        else:
-            logger.error("Failed to create pull request")
-            return False
+            # Create pull request
+            pr_url = client.create_pull_request(
+                github_repository,
+                pr_title,
+                pr_body,
+                branch_name,
+            )
+            
+            if pr_url:
+                logger.info(f"Pull request created: {pr_url}")
+                success = True
+            else:
+                logger.error("Failed to create pull request")
+                success = False
+    
+        return success
+    
+    finally:
+        # Always restore original working directory
+        os.chdir(original_cwd)
+        logger.info(f"Restored working directory to: {os.getcwd()}")
 
 
 def main() -> None:
