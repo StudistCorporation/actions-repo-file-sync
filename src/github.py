@@ -353,6 +353,25 @@ class GitHubClient:
                 try:
                     error_details = e.response.json()
                     logger.error(f"GitHub API error details: {error_details}")
+                    
+                    # Check if PR already exists
+                    if (error_details.get('message') == 'Validation Failed' and 
+                        any('pull request already exists' in str(error.get('message', '')) 
+                            for error in error_details.get('errors', []))):
+                        logger.info("Pull request already exists - this is expected behavior when updating an existing PR")
+                        # Try to get the existing PR URL
+                        try:
+                            list_url = f"{self.API_URL}/repos/{repo}/pulls?head={repo.split('/')[0]}:{head_branch}"
+                            list_response = self.session.get(list_url, timeout=self.timeout)
+                            list_response.raise_for_status()
+                            prs = list_response.json()
+                            if prs:
+                                existing_pr_url = prs[0]["html_url"]
+                                logger.info(f"Existing pull request updated: {existing_pr_url}")
+                                return existing_pr_url
+                        except Exception as ex:
+                            logger.warning(f"Could not get existing PR URL: {ex}")
+                        return f"https://github.com/{repo}/pulls"  # Return generic PR list URL
                 except:
                     logger.error(f"Response content: {e.response.text}")
             return None
