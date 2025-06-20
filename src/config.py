@@ -16,13 +16,15 @@ from typing_extensions import TypedDict
 logger = logging.getLogger(__name__)
 
 
-class EnvConfig(TypedDict):
+class EnvConfig(TypedDict, total=False):
     """Configuration for an environment variable.
     Defines a name-value pair for environment variable substitution.
+    Can optionally specify 'regex' to enable regex pattern matching.
     """
 
     name: str
     value: str
+    regex: bool  # Optional field to enable regex pattern matching
 
 
 class SourceConfig(TypedDict):
@@ -217,6 +219,16 @@ def _load_envs_file(envs_file_path: Path) -> list[EnvConfig]:
             "name": name,
             "value": value,
         }
+        
+        # Add optional regex field if present
+        if "regex" in env:
+            regex = env["regex"]
+            if not isinstance(regex, bool):
+                raise ValueError(
+                    f"Environment variable {i} in external file: 'regex' must be a boolean"
+                )
+            validated_env["regex"] = regex
+        
         validated_envs.append(validated_env)
 
     logger.info(

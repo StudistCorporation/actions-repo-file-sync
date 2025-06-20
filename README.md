@@ -49,6 +49,10 @@ sources:
   value: awesome-checkout-action
 - name: PROJECT_NAME
   value: "My Awesome Project"
+# 正規表現を使用する場合（オプション）
+- name: 'v\d+\.\d+\.\d+'
+  value: 'latest'
+  regex: true
 ```
 
 ## 使い方
@@ -245,20 +249,60 @@ uv run python -m src.cli --help
 
 ## 環境変数置換
 
-ダウンロードしたファイル内で文字列の置換が行われます：
+ダウンロードしたファイル内で文字列の置換が行われます。単純な文字列置換に加えて、正規表現を使用した置換もサポートしています。
 
-### 置換前のファイル内容
+### 単純な文字列置換
+
+#### 置換前のファイル内容
 ```yaml
 name: actions/checkout
 version: v4
 project: PROJECT_NAME
 ```
 
-### 置換後のファイル内容
+#### 置換後のファイル内容
 ```yaml
 name: awesome-checkout-action
 version: v4
 project: My Awesome Project
+```
+
+### 正規表現を使用した置換
+
+環境変数に `regex: true` を指定することで、正規表現パターンマッチングが有効になります：
+
+#### 環境変数ファイルの例（`repo-file-sync.envs.yaml`）
+```yaml
+# バージョン番号を一括置換
+- name: 'v\d+\.\d+\.\d+'
+  value: 'latest'
+  regex: true
+
+# メールアドレスのドメインを変更
+- name: '(\w+)@example\.com'
+  value: '\1@mycompany.com'
+  regex: true
+
+# 特定のパターンに一致するURLを置換
+- name: 'https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/'
+  value: 'https://cdn.example.com/\1/\2/'
+  regex: true
+```
+
+#### 置換前のファイル内容
+```yaml
+version: v1.2.3
+contact: john@example.com
+url: https://raw.githubusercontent.com/owner/repo/main/file.txt
+old_version: v0.9.0
+```
+
+#### 置換後のファイル内容
+```yaml
+version: latest
+contact: john@mycompany.com
+url: https://cdn.example.com/owner/repo/main/file.txt
+old_version: latest
 ```
 
 ## テスト

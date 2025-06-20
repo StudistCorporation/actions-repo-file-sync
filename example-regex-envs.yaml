@@ -1,0 +1,25 @@
+# Example environment variables file with regex support
+
+# Simple string replacements
+- name: OLD_PROJECT_NAME
+  value: NEW_PROJECT_NAME
+
+# Replace all version numbers with 'latest'
+- name: 'v\d+\.\d+\.\d+'
+  value: 'latest'
+  regex: true
+
+# Update email domains
+- name: '(\w+)@oldcompany\.com'
+  value: '\1@newcompany.com'
+  regex: true
+
+# Replace GitHub raw URLs with CDN URLs
+- name: 'https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/([^/]+)/'
+  value: 'https://cdn.example.com/github/\1/\2/\3/'
+  regex: true
+
+# Replace date formats (YYYY-MM-DD to DD/MM/YYYY)
+- name: '(\d{4})-(\d{2})-(\d{2})'
+  value: '\3/\2/\1'
+  regex: true

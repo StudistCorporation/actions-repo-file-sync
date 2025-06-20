@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from .config import Config, SourceConfig
+from .config import Config, EnvConfig, SourceConfig
 from .github import GitHubClient
 
 logger = logging.getLogger(__name__)
@@ -133,8 +133,8 @@ class RepoFileSync:
         if not dry_run:
             output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Build environment variables dictionary
-        env_vars = {env["name"]: env["value"] for env in config["envs"]}
+        # Pass environment variables list directly
+        env_vars = config["envs"]
         if env_vars:
             logger.info(f"Using {len(env_vars)} environment variables for substitution")
 
@@ -160,7 +160,7 @@ class RepoFileSync:
         output_dir: Path,
         dry_run: bool,
         preserve_structure: bool,
-        env_vars: dict[str, str],
+        env_vars: list[EnvConfig],
     ) -> SyncResult:
         """Synchronize files from a single source repository.
 

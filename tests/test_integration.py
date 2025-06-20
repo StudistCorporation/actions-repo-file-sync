@@ -222,7 +222,7 @@ sources:
             )
 
             config = load_config(config_file)
-            env_vars = {env["name"]: env["value"] for env in config["envs"]}
+            env_vars = config["envs"]  # Pass the list directly
 
             # Mock dry-run by not actually writing files
             output_dir = tmp_path / "output"

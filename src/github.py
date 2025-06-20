@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -96,7 +97,7 @@ class GitHubClient:
         ref: str,
         file_path: str,
         output_path: Optional[Path] = None,
-        env_vars: Optional[dict[str, str]] = None,
+        env_vars: Optional[list[dict]] = None,
     ) -> bytes:
         """Download a file from a GitHub repository.
 
@@ -250,15 +251,16 @@ class GitHubClient:
             logger.debug(f"API response parsing failed: {e}")
             return None
 
-    def _substitute_env_vars(self, content: bytes, env_vars: dict[str, str]) -> bytes:
+    def _substitute_env_vars(self, content: bytes, env_vars: list[dict]) -> bytes:
         """Substitute environment variables in file content.
 
         Replaces occurrences of environment variable names with their values
-        in the file content. Only substitutes if the file appears to be text.
+        in the file content. Supports both simple string replacement and regex patterns.
+        Only substitutes if the file appears to be text.
 
         Args:
             content: Original file content as bytes
-            env_vars: Dictionary mapping variable names to values
+            env_vars: List of environment variable configurations with name, value, and optional regex flag
 
         Returns:
             Modified content with environment variables substituted
@@ -271,13 +273,31 @@ class GitHubClient:
             modified_content = text_content
             substitutions_made = 0
 
-            for name, value in env_vars.items():
-                if name in modified_content:
-                    old_content = modified_content
-                    modified_content = modified_content.replace(name, value)
-                    if modified_content != old_content:
-                        substitutions_made += 1
-                        logger.debug(f"Replaced '{name}' with '{value}'")
+            for env_var in env_vars:
+                name = env_var["name"]
+                value = env_var["value"]
+                is_regex = env_var.get("regex", False)
+
+                old_content = modified_content
+                
+                if is_regex:
+                    # Use regex replacement
+                    try:
+                        modified_content = re.sub(name, value, modified_content)
+                        if modified_content != old_content:
+                            substitutions_made += 1
+                            logger.debug(f"Replaced regex pattern '{name}' with '{value}'")
+                    except re.error as e:
+                        logger.error(f"Invalid regex pattern '{name}': {e}")
+                        # Skip this substitution if regex is invalid
+                        continue
+                else:
+                    # Use simple string replacement
+                    if name in modified_content:
+                        modified_content = modified_content.replace(name, value)
+                        if modified_content != old_content:
+                            substitutions_made += 1
+                            logger.debug(f"Replaced '{name}' with '{value}'")
 
             if substitutions_made > 0:
                 logger.info(
