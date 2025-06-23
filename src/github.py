@@ -703,36 +703,36 @@ class GitHubClient:
                 except subprocess.CalledProcessError as e:
                     logger.error(f"Failed to create empty commit: {e}")
                     return False
+            else:
+                logger.info(f"Changes detected: {changed_files}")
 
-            logger.info(f"Changes detected: {changed_files}")
+                # If specific files were provided, we already added them
+                # Otherwise, add all changes excluding __pycache__ directories
+                if not files_to_add:
+                    subprocess.run(
+                        ["git", "add", "."],
+                        check=True,
+                        capture_output=True,
+                    )
 
-            # If specific files were provided, we already added them
-            # Otherwise, add all changes excluding __pycache__ directories
-            if not files_to_add:
+                # Remove __pycache__ files from staging before commit
+                try:
+                    subprocess.run(
+                        ["git", "reset", "HEAD", "*/__pycache__/*"],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info("Removed __pycache__ files from final staging")
+                except subprocess.CalledProcessError:
+                    # No __pycache__ files to remove, which is fine
+                    pass
+
+                # Commit changes
                 subprocess.run(
-                    ["git", "add", "."],
+                    ["git", "commit", "-m", commit_message],
                     check=True,
                     capture_output=True,
                 )
-
-            # Remove __pycache__ files from staging before commit
-            try:
-                subprocess.run(
-                    ["git", "reset", "HEAD", "*/__pycache__/*"],
-                    check=True,
-                    capture_output=True,
-                )
-                logger.info("Removed __pycache__ files from final staging")
-            except subprocess.CalledProcessError:
-                # No __pycache__ files to remove, which is fine
-                pass
-
-            # Commit changes
-            subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                check=True,
-                capture_output=True,
-            )
 
             # Push to remote with -u flag to set upstream
             try:
