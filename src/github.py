@@ -386,10 +386,12 @@ class GitHubClient:
 
         try:
             url = f"{self.API_URL}/repos/{repo}/pulls"
+            # For cross-repo PRs or when the API requires it, use owner:branch format
+            owner = repo.split("/")[0]
             data = {
                 "title": title,
                 "body": body,
-                "head": head_branch,
+                "head": f"{owner}:{head_branch}",
                 "base": base_branch,
             }
 
@@ -435,6 +437,11 @@ class GitHubClient:
                         ),
                         any(
                             "head sha" in str(error.get("message", "")).lower()
+                            for error in error_details_list
+                        ),
+                        # Check for invalid head field error (branch doesn't exist on remote)
+                        any(
+                            error.get("field") == "head" and error.get("code") == "invalid"
                             for error in error_details_list
                         ),
                     ]
@@ -703,12 +710,21 @@ class GitHubClient:
                 capture_output=True,
             )
 
-            # Push to remote
-            subprocess.run(
-                ["git", "push", "origin", branch_name],
-                check=True,
-                capture_output=True,
-            )
+            # Push to remote with -u flag to set upstream
+            try:
+                subprocess.run(
+                    ["git", "push", "-u", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
+            except subprocess.CalledProcessError:
+                # If push with -u fails, try force push (in case branch exists remotely)
+                logger.info("Regular push failed, trying force push")
+                subprocess.run(
+                    ["git", "push", "-f", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
 
             logger.info(f"Successfully pushed changes to branch: {branch_name}")
             return True
