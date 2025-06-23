@@ -659,26 +659,30 @@ class GitHubClient:
                     # No __pycache__ files to remove, which is fine
                     pass
 
-            # Check if there are changes using git diff --name-only (like TypeScript)
+            # Check if there are changes using git status --porcelain
+            # This will show both staged and unstaged changes
             result = subprocess.run(
-                ["git", "diff", "--name-only"],
+                ["git", "status", "--porcelain"],
                 capture_output=True,
                 text=True,
             )
 
             changed_files = result.stdout.strip()
+            
             if not changed_files:
                 logger.info("No changes detected to commit")
                 return True  # Return True to allow PR creation workflow to continue
 
-            logger.info(f"Changes detected in files: {changed_files}")
+            logger.info(f"Changes detected: {changed_files}")
 
-            # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
-            subprocess.run(
-                ["git", "add", "."],
-                check=True,
-                capture_output=True,
-            )
+            # If specific files were provided, we already added them
+            # Otherwise, add all changes excluding __pycache__ directories
+            if not files_to_add:
+                subprocess.run(
+                    ["git", "add", "."],
+                    check=True,
+                    capture_output=True,
+                )
 
             # Remove __pycache__ files from staging before commit
             try:
