@@ -277,6 +277,7 @@ class GitHubClient:
                 name = env_var["name"]
                 value = env_var["value"]
                 is_regex = env_var.get("regex", False)
+                logger.debug(f"Processing env var: name='{name}', value='{value}', regex={is_regex}")
 
                 old_content = modified_content
                 
@@ -286,7 +287,7 @@ class GitHubClient:
                         modified_content = re.sub(name, value, modified_content)
                         if modified_content != old_content:
                             substitutions_made += 1
-                            logger.debug(f"Replaced regex pattern '{name}' with '{value}'")
+                            logger.info(f"Replaced regex pattern '{name}' with '{value}'")
                     except re.error as e:
                         logger.error(f"Invalid regex pattern '{name}': {e}")
                         # Skip this substitution if regex is invalid
@@ -297,7 +298,7 @@ class GitHubClient:
                         modified_content = modified_content.replace(name, value)
                         if modified_content != old_content:
                             substitutions_made += 1
-                            logger.debug(f"Replaced '{name}' with '{value}'")
+                            logger.info(f"Replaced '{name}' with '{value}'")
 
             if substitutions_made > 0:
                 logger.info(

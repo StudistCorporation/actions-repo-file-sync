@@ -6,3 +6,10 @@
   value: from-external-file
 - name: PROJECT_NAME
   value: "Awesome Project"
+# Regex patterns for testing
+- name: 'v\d+\.\d+\.\d+'
+  value: 'latest'
+  regex: true
+- name: 'test-(\w+)-pattern'
+  value: 'replaced-\1-text'
+  regex: true
