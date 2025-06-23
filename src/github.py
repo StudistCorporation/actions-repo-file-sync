@@ -653,12 +653,21 @@ class GitHubClient:
             # Add files based on TypeScript pattern: add -N . first, then check diff
             if files_to_add:
                 # Add specific files
+                logger.info(f"Adding specific files: {files_to_add}")
                 for file_path in files_to_add:
-                    subprocess.run(
-                        ["git", "add", file_path],
-                        check=True,
-                        capture_output=True,
-                    )
+                    # Check if file/directory exists
+                    if os.path.exists(file_path):
+                        logger.info(f"Adding {file_path} (exists: True)")
+                        result = subprocess.run(
+                            ["git", "add", file_path],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+                        if result.stderr:
+                            logger.warning(f"Git add stderr for {file_path}: {result.stderr}")
+                    else:
+                        logger.error(f"File/directory {file_path} does not exist!")
             else:
                 # Add all files excluding __pycache__ directories (TypeScript pattern: git add -N .)
                 subprocess.run(
@@ -679,6 +688,10 @@ class GitHubClient:
                     # No __pycache__ files to remove, which is fine
                     pass
 
+            # Log current directory and files
+            logger.info(f"Current directory: {os.getcwd()}")
+            logger.info(f"Directory contents: {os.listdir('.')}")
+            
             # Check if there are changes using git status --porcelain
             # This will show both staged and unstaged changes
             result = subprocess.run(
@@ -688,6 +701,7 @@ class GitHubClient:
             )
 
             changed_files = result.stdout.strip()
+            logger.info(f"Git status output: {result.stdout}")
             
             if not changed_files:
                 logger.info("No changes detected to commit")
