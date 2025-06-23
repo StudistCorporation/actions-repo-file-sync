@@ -447,26 +447,39 @@ class GitHubClient:
                     ]
 
                     if any(pr_exists_indicators):
-                        logger.info(
-                            "Pull request already exists - this is expected behavior when updating an existing PR"
+                        # Check if it's specifically a "head branch doesn't exist" error
+                        head_invalid_error = any(
+                            error.get("field") == "head" and error.get("code") == "invalid"
+                            for error in error_details_list
                         )
-                        # Try to get the existing PR URL
-                        try:
-                            list_url = f"{self.API_URL}/repos/{repo}/pulls?head={repo.split('/')[0]}:{head_branch}"
-                            list_response = self.session.get(
-                                list_url, timeout=self.timeout
+                        
+                        if head_invalid_error:
+                            logger.error(
+                                f"Branch '{head_branch}' does not exist on remote repository. "
+                                "The branch may not have been pushed successfully."
                             )
-                            list_response.raise_for_status()
-                            prs = list_response.json()
-                            if prs:
-                                existing_pr_url = prs[0]["html_url"]
-                                logger.info(
-                                    f"Existing pull request updated: {existing_pr_url}"
+                            return None
+                        else:
+                            logger.info(
+                                "Pull request already exists - this is expected behavior when updating an existing PR"
+                            )
+                            # Try to get the existing PR URL
+                            try:
+                                list_url = f"{self.API_URL}/repos/{repo}/pulls?head={repo.split('/')[0]}:{head_branch}"
+                                list_response = self.session.get(
+                                    list_url, timeout=self.timeout
                                 )
-                                return existing_pr_url
-                        except Exception as ex:
-                            logger.warning(f"Could not get existing PR URL: {ex}")
-                        return f"https://github.com/{repo}/pulls"  # Return generic PR list URL
+                                list_response.raise_for_status()
+                                prs = list_response.json()
+                                if prs:
+                                    existing_pr_url = prs[0]["html_url"]
+                                    logger.info(
+                                        f"Existing pull request updated: {existing_pr_url}"
+                                    )
+                                    return existing_pr_url
+                            except Exception as ex:
+                                logger.warning(f"Could not get existing PR URL: {ex}")
+                            return f"https://github.com/{repo}/pulls"  # Return generic PR list URL
                 except Exception as parse_error:
                     logger.error(f"Failed to parse error response: {parse_error}")
                     logger.error(f"Response content: {e.response.text}")
@@ -678,7 +691,18 @@ class GitHubClient:
             
             if not changed_files:
                 logger.info("No changes detected to commit")
-                return True  # Return True to allow PR creation workflow to continue
+                # Create an empty commit to ensure branch can be pushed
+                logger.info("Creating empty commit to establish branch on remote")
+                try:
+                    subprocess.run(
+                        ["git", "commit", "--allow-empty", "-m", f"{commit_message} (no changes)"],
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info("Created empty commit")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to create empty commit: {e}")
+                    return False
 
             logger.info(f"Changes detected: {changed_files}")
 
@@ -712,21 +736,50 @@ class GitHubClient:
 
             # Push to remote with -u flag to set upstream
             try:
-                subprocess.run(
+                result = subprocess.run(
                     ["git", "push", "-u", "origin", branch_name],
                     check=True,
                     capture_output=True,
+                    text=True,
                 )
-            except subprocess.CalledProcessError:
+                logger.info(f"Push output: {result.stdout}")
+                if result.stderr:
+                    logger.info(f"Push stderr: {result.stderr}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Push failed with error: {e}")
+                logger.error(f"Push stdout: {e.stdout}")
+                logger.error(f"Push stderr: {e.stderr}")
                 # If push with -u fails, try force push (in case branch exists remotely)
                 logger.info("Regular push failed, trying force push")
-                subprocess.run(
-                    ["git", "push", "-f", "origin", branch_name],
-                    check=True,
-                    capture_output=True,
-                )
+                try:
+                    result = subprocess.run(
+                        ["git", "push", "-f", "origin", branch_name],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                    logger.info(f"Force push output: {result.stdout}")
+                    if result.stderr:
+                        logger.info(f"Force push stderr: {result.stderr}")
+                except subprocess.CalledProcessError as e2:
+                    logger.error(f"Force push also failed: {e2}")
+                    logger.error(f"Force push stdout: {e2.stdout}")
+                    logger.error(f"Force push stderr: {e2.stderr}")
+                    raise
 
             logger.info(f"Successfully pushed changes to branch: {branch_name}")
+            
+            # Verify the branch exists on remote
+            verify_result = subprocess.run(
+                ["git", "ls-remote", "--heads", "origin", branch_name],
+                capture_output=True,
+                text=True,
+            )
+            if verify_result.stdout:
+                logger.info(f"Verified branch {branch_name} exists on remote")
+            else:
+                logger.warning(f"Branch {branch_name} not found on remote after push!")
+            
             return True
 
         except subprocess.CalledProcessError as e:
