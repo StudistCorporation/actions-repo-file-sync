@@ -753,5 +753,5 @@ class GitHubClient:
         if not self.create_branch(branch_name):
             return False
 
-        # Add files and push (pass None to use TypeScript-style "add all" behavior)
-        return self.add_files_and_push(branch_name, commit_message, None)
+        # Add files and push
+        return self.add_files_and_push(branch_name, commit_message, files_to_add)
