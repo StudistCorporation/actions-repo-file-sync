@@ -658,8 +658,9 @@ class GitHubClient:
                     # Check if file/directory exists
                     if os.path.exists(file_path):
                         logger.info(f"Adding {file_path} (exists: True)")
+                        # Use -f flag to force add even if ignored
                         result = subprocess.run(
-                            ["git", "add", file_path],
+                            ["git", "add", "-f", file_path],
                             check=True,
                             capture_output=True,
                             text=True,
