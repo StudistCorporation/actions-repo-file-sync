@@ -6,5 +6,6 @@
   value: from-external-file
 - name: PROJECT_NAME
   value: "Awesome Project"
-- name: '([A-Za-z0-9_-]+) references'
+- name: '([a-z|A-Z]+) references'
   value: 'Super \1 references'
+  regex: true
