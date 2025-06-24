@@ -3,7 +3,7 @@
 - name: Checkout V4
   value: Super Checkout V100
 - name: EXTERNAL_VAR
-  value: from-external-file
+  value: from-external-filexxx
 - name: PROJECT_NAME
   value: "Awesome Project"
 - name: "<!-- Updated: 2025-06-24 - Testing existing PR update functionality -->"
