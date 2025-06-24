@@ -3,7 +3,9 @@
 
 GitHub リポジトリから指定されたファイルを YAML 設定に基づいてローカルに同期するPythonツールです。環境変数の置換機能も提供します。
 
-<!-- Updated: 2025-06-24 - Testing existing PR update functionality -->
+<!-- Successfully updated at 2025-06-24 14:00 JST -->
+
+**最終更新**: 2025年6月24日 - 既存PRへの更新機能が正常に動作することを確認
 
 ## 機能
 
