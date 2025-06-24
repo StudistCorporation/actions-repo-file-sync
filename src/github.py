@@ -544,6 +544,15 @@ class GitHubClient:
                     check=True,
                     capture_output=True,
                 )
+                
+                # Check if we have staged changes that need to be preserved
+                staged_check = subprocess.run(
+                    ["git", "diff", "--cached", "--name-only"],
+                    capture_output=True,
+                    text=True,
+                )
+                has_staged_changes = bool(staged_check.stdout.strip())
+                
                 # First check if branch already exists locally
                 local_branches = subprocess.run(
                     ["git", "branch", "--list", branch_name],
@@ -552,24 +561,21 @@ class GitHubClient:
                 ).stdout.strip()
                 
                 if local_branches:
-                    # Branch exists locally, checkout and reset to origin
+                    # Branch exists locally, delete it and recreate from origin
+                    # This ensures we start fresh but preserve staged changes
                     subprocess.run(
-                        ["git", "checkout", branch_name],
+                        ["git", "branch", "-D", branch_name],
                         check=True,
                         capture_output=True,
                     )
-                    subprocess.run(
-                        ["git", "reset", "--hard", f"origin/{branch_name}"],
-                        check=True,
-                        capture_output=True,
-                    )
-                else:
-                    # Create new local branch from origin
-                    subprocess.run(
-                        ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
-                        check=True,
-                        capture_output=True,
-                    )
+                
+                # Create new local branch from origin
+                subprocess.run(
+                    ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
+                    check=True,
+                    capture_output=True,
+                )
+                
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
                 # Branch doesn't exist, create new one from base_branch (usually main)
@@ -646,8 +652,22 @@ class GitHubClient:
             )
             unstaged_files = unstaged_result.stdout.strip()
             
+            # Also check for differences with the remote branch
+            try:
+                remote_diff_result = subprocess.run(
+                    ["git", "diff", f"origin/{branch_name}", "--name-only"],
+                    capture_output=True,
+                    text=True,
+                )
+                remote_diff_files = remote_diff_result.stdout.strip()
+                if remote_diff_files:
+                    logger.info(f"Files differ from remote branch: {remote_diff_files}")
+            except subprocess.CalledProcessError:
+                # Remote branch might not exist yet
+                remote_diff_files = ""
+            
             # If no staged files and no unstaged files, try to detect changes
-            if not staged_files and not unstaged_files:
+            if not staged_files and not unstaged_files and not remote_diff_files:
                 # Add files based on TypeScript pattern: add -N . first, then check diff
                 if files_to_add:
                     # Add specific files
@@ -685,15 +705,25 @@ class GitHubClient:
                 )
                 changed_files = result.stdout.strip()
             else:
-                # We have staged or unstaged files
-                changed_files = staged_files or unstaged_files
-                logger.info(f"Found existing changes - staged: {bool(staged_files)}, unstaged: {bool(unstaged_files)}")
+                # We have staged or unstaged files or remote differences
+                changed_files = staged_files or unstaged_files or remote_diff_files
+                logger.info(f"Found existing changes - staged: {bool(staged_files)}, unstaged: {bool(unstaged_files)}, remote diff: {bool(remote_diff_files)}")
 
             if not changed_files:
                 logger.info("No changes detected to commit")
                 return True  # Return True to allow PR creation workflow to continue
 
             logger.info(f"Changes detected in files: {changed_files}")
+
+            # If we detected remote differences but no local changes, add the different files
+            if remote_diff_files and not staged_files and not unstaged_files:
+                # Add the files that differ from remote
+                subprocess.run(
+                    ["git", "add", "."],
+                    check=True,
+                    capture_output=True,
+                )
+                logger.info("Added files that differ from remote branch")
 
             # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
             subprocess.run(
