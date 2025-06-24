@@ -3,6 +3,8 @@
 
 GitHub リポジトリから指定されたファイルを YAML 設定に基づいてローカルに同期するPythonツールです。環境変数の置換機能も提供します。
 
+<!-- Test update for PR fix verification -->
+
 ## 機能
 
 - 複数のGitHubリポジトリから複数のファイルを一括ダウンロード
