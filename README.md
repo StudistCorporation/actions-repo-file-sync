@@ -3,6 +3,7 @@
 GitHub リポジトリから指定されたファイルを YAML 設定に基づいてローカルに同期するPythonツールです。環境変数の置換機能も提供します。
 
 <!-- Test update for PR fix verification -->
+<!-- Second test update -->
 
 ## 機能
 
