@@ -636,110 +636,46 @@ class GitHubClient:
             True if successful, False otherwise
         """
         try:
-            # Check if there are already staged changes
-            staged_result = subprocess.run(
-                ["git", "diff", "--cached", "--name-only"],
-                capture_output=True,
-                text=True,
-            )
-            staged_files = staged_result.stdout.strip()
-            
-            # Check for unstaged changes
-            unstaged_result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True,
-                text=True,
-            )
-            unstaged_files = unstaged_result.stdout.strip()
-            
-            # Also check for differences with the remote branch
-            try:
-                remote_diff_result = subprocess.run(
-                    ["git", "diff", f"origin/{branch_name}", "--name-only"],
-                    capture_output=True,
-                    text=True,
-                )
-                remote_diff_files = remote_diff_result.stdout.strip()
-                if remote_diff_files:
-                    logger.info(f"Files differ from remote branch: {remote_diff_files}")
-            except subprocess.CalledProcessError:
-                # Remote branch might not exist yet
-                remote_diff_files = ""
-            
-            # If no staged files and no unstaged files, try to detect changes
-            if not staged_files and not unstaged_files and not remote_diff_files:
-                # Add files based on TypeScript pattern: add -N . first, then check diff
-                if files_to_add:
-                    # Add specific files
-                    for file_path in files_to_add:
-                        subprocess.run(
-                            ["git", "add", file_path],
-                            check=True,
-                            capture_output=True,
-                        )
-                else:
-                    # Add all files excluding __pycache__ directories (TypeScript pattern: git add -N .)
+            # First, always add the files to ensure they are tracked
+            if files_to_add:
+                # Add specific files
+                for file_path in files_to_add:
                     subprocess.run(
-                        ["git", "add", "-N", "."],
+                        ["git", "add", "-f", file_path],  # Use -f to force add
                         check=True,
                         capture_output=True,
                     )
-
-                    # Remove __pycache__ files from staging if they were added
-                    try:
-                        subprocess.run(
-                            ["git", "reset", "HEAD", "*/__pycache__/*"],
-                            check=True,
-                            capture_output=True,
-                        )
-                        logger.info("Removed __pycache__ files from staging")
-                    except subprocess.CalledProcessError:
-                        # No __pycache__ files to remove, which is fine
-                        pass
-                
-                # Re-check for changes
-                result = subprocess.run(
-                    ["git", "status", "--porcelain"],
-                    capture_output=True,
-                    text=True,
-                )
-                changed_files = result.stdout.strip()
+                logger.info(f"Added specified files: {files_to_add}")
             else:
-                # We have staged or unstaged files or remote differences
-                changed_files = staged_files or unstaged_files or remote_diff_files
-                logger.info(f"Found existing changes - staged: {bool(staged_files)}, unstaged: {bool(unstaged_files)}, remote diff: {bool(remote_diff_files)}")
-
-            if not changed_files:
-                logger.info("No changes detected to commit")
-                return True  # Return True to allow PR creation workflow to continue
-
-            logger.info(f"Changes detected in files: {changed_files}")
-
-            # If we detected remote differences but no local changes, add the different files
-            if remote_diff_files and not staged_files and not unstaged_files:
-                # Add the files that differ from remote
+                # Add all changes
                 subprocess.run(
                     ["git", "add", "."],
                     check=True,
                     capture_output=True,
                 )
-                logger.info("Added files that differ from remote branch")
-
-            # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
-            subprocess.run(
-                ["git", "add", "."],
-                check=True,
+                logger.info("Added all changes")
+            
+            # Now check if there are any changes to commit
+            diff_result = subprocess.run(
+                ["git", "diff", "--cached", "--stat"],
                 capture_output=True,
+                text=True,
             )
-
-            # Remove __pycache__ files from staging before commit
+            
+            if not diff_result.stdout.strip():
+                logger.info("No changes detected to commit - files are identical")
+                return True  # Return True to allow PR creation workflow to continue
+            
+            logger.info(f"Changes to be committed:\n{diff_result.stdout}")
+            
+            # Remove __pycache__ files from staging if they were added
             try:
                 subprocess.run(
                     ["git", "reset", "HEAD", "*/__pycache__/*"],
                     check=True,
                     capture_output=True,
                 )
-                logger.info("Removed __pycache__ files from final staging")
+                logger.info("Removed __pycache__ files from staging")
             except subprocess.CalledProcessError:
                 # No __pycache__ files to remove, which is fine
                 pass
@@ -791,35 +727,9 @@ class GitHubClient:
         Returns:
             True if successful, False otherwise
         """
-        # Set up git configuration if not already done
-        self._setup_git_config()
-        
-        # First, stage the files in the current branch to preserve changes
-        try:
-            # Add files to git index (staging area)
-            if files_to_add:
-                for file_path in files_to_add:
-                    subprocess.run(
-                        ["git", "add", file_path],
-                        check=True,
-                        capture_output=True,
-                    )
-                logger.info(f"Staged files: {files_to_add}")
-            else:
-                # Add all changes
-                subprocess.run(
-                    ["git", "add", "."],
-                    check=True,
-                    capture_output=True,
-                )
-                logger.info("Staged all changes")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to stage files: {e}")
-            return False
-
-        # Create/checkout branch (staged changes will be preserved)
+        # Create/checkout branch
         if not self.create_branch(branch_name):
             return False
 
-        # Now commit and push the staged changes
-        return self.add_files_and_push(branch_name, commit_message, None)
+        # Add files and push
+        return self.add_files_and_push(branch_name, commit_message, files_to_add)
