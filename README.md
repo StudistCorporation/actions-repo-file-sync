@@ -4,6 +4,7 @@ GitHub リポジトリから指定されたファイルを YAML 設定に基づ�
 
 <!-- Test update for PR fix verification -->
 <!-- Second test update -->
+<!-- Third test update with remote diff detection -->
 
 ## 機能
 
