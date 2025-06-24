@@ -1,6 +1,6 @@
 envs_file: repo-file-sync.envs.yaml
 sources:
   - repo: StudistCorporation/actions-repo-file-sync
-    ref: cbb20bdcd4ef3ecb5c2bc428a269092e35fe31c6
+    ref: 6ca706fc35136331732a59fc038b5461b032782c
     files:
     - README.md
