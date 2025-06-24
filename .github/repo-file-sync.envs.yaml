@@ -6,6 +6,6 @@
   value: from-external-file
 - name: PROJECT_NAME
   value: "Awesome Project"
-- name: "<!-- Test update for PR fix verification -->"
-  value: "<!-- PR fix verified at 2025-06-24 -->"
+- name: "<!-- Updated: 2025-06-24 - Testing existing PR update functionality -->"
+  value: "<!-- Successfully updated at 2025-06-24 14:00 JST -->"
 
