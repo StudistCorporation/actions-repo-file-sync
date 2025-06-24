@@ -1,7 +1,7 @@
 - name: actions/checkout
   value: awesome-checkout-action
 - name: Checkout V4
-  value: Super Checkout V5
+  value: Super Checkout V100
 - name: EXTERNAL_VAR
   value: from-external-file
 - name: PROJECT_NAME
