@@ -601,20 +601,36 @@ class GitHubClient:
                 ).stdout.strip()
                 
                 if local_branches:
-                    # Branch exists locally, delete it and recreate from origin
-                    # This ensures we start fresh but preserve staged changes
+                    # Branch exists locally
+                    # Check if we're currently on this branch
+                    if current_branch_result.stdout.strip() == branch_name:
+                        # We're already on the branch, just pull latest changes
+                        subprocess.run(
+                            ["git", "pull", "origin", branch_name, "--ff-only"],
+                            check=True,
+                            capture_output=True,
+                        )
+                        logger.info(f"Already on branch {branch_name}, pulled latest changes")
+                    else:
+                        # We're on a different branch, checkout the existing branch
+                        subprocess.run(
+                            ["git", "checkout", branch_name],
+                            check=True,
+                            capture_output=True,
+                        )
+                        # Pull latest changes
+                        subprocess.run(
+                            ["git", "pull", "origin", branch_name, "--ff-only"],
+                            check=True,
+                            capture_output=True,
+                        )
+                else:
+                    # Create new local branch from origin
                     subprocess.run(
-                        ["git", "branch", "-D", branch_name],
+                        ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
                         check=True,
                         capture_output=True,
                     )
-                
-                # Create new local branch from origin
-                subprocess.run(
-                    ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
-                    check=True,
-                    capture_output=True,
-                )
                 
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
@@ -634,6 +650,13 @@ class GitHubClient:
 
                 # Create new branch from base_branch
                 try:
+                    # Check if we need to switch from current branch first
+                    if current_branch_result.stdout.strip() == branch_name:
+                        # We're trying to create a branch we're already on
+                        # This shouldn't happen, but handle it gracefully
+                        logger.warning(f"Already on branch {branch_name}, cannot create it again")
+                        return True
+                    
                     subprocess.run(
                         ["git", "checkout", "-b", branch_name, f"origin/{base_branch}"],
                         check=True,
