@@ -244,7 +244,31 @@ def main() -> None:
             f"{total_files} files to sync"
         )
 
-        # Perform synchronization
+        # If creating a PR, switch to the PR branch first to avoid file conflicts
+        if args.create_pr and not args.dry_run:
+            logger.info("Preparing for pull request creation...")
+            
+            # Get repository info from environment
+            github_repository = os.getenv("GITHUB_REPOSITORY")
+            github_workspace = os.getenv("GITHUB_WORKSPACE", os.getcwd())
+            
+            if github_repository and github_workspace:
+                # Change to GitHub workspace directory
+                original_cwd = os.getcwd()
+                os.chdir(github_workspace)
+                
+                try:
+                    with GitHubClient(timeout=args.timeout) as client:
+                        # Create/checkout the PR branch before downloading files
+                        if client.create_branch(args.branch_name):
+                            logger.info(f"Successfully switched to branch: {args.branch_name}")
+                        else:
+                            logger.warning(f"Failed to switch to branch: {args.branch_name}")
+                finally:
+                    # Restore original directory
+                    os.chdir(original_cwd)
+
+        # Perform synchronization (now on the correct branch if PR mode)
         with RepoFileSync(timeout=args.timeout) as sync:
             result = sync.sync(
                 config_data,
