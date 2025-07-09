@@ -7,7 +7,5 @@
   value: from-external-filexxx
 - name: PROJECT_NAME
   value: "Awesome Project"
-- name: "<!-- Updated: 2025-06-24 - Testing existing PR update functionality -->"
-  value: "<!-- Successfully updated at 2025-06-24 14:00 JST -->"
 
 
