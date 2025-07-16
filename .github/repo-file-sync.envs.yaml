@@ -4,7 +4,7 @@
   value: Super Checkout V6
   regex: true
 - name: EXTERNAL_VAR
-  value: from-external-filexxx
+  value: from-external-file
 - name: PROJECT_NAME
   value: "Awesome Project"
 
