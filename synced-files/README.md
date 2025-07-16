@@ -4,11 +4,11 @@
 
 Basic test cases:
 - Repository: awesome-checkout-action
-- Version: Super Checkout V100
+- Version: Super Checkout V10
 - External: from-external-filexxx
 - Project: Awesome Project
 
-JSON example: {"repo": "awesome-checkout-action", "version": "Super Checkout V100"}
+JSON example: {"repo": "awesome-checkout-action", "version": "Super Checkout V10"}
 
 Multiple references:
 1. awesome-checkout-action
