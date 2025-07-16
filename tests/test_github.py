@@ -111,10 +111,10 @@ class TestGitHubClient:
         """Test environment variable substitution in file content."""
         client = GitHubClient()
         content = b"Repository: actions/checkout\nVersion: Checkout V4"
-        env_vars = {
-            "actions/checkout": "awesome-checkout-action",
-            "Checkout V4": "Super Checkout V5",
-        }
+        env_vars = [
+            {"name": "actions/checkout", "value": "awesome-checkout-action"},
+            {"name": "Checkout V4", "value": "Super Checkout V5"},
+        ]
 
         result = client._substitute_env_vars(content, env_vars)
         expected = b"Repository: awesome-checkout-action\nVersion: Super Checkout V5"
@@ -124,7 +124,10 @@ class TestGitHubClient:
         """Test environment variable substitution with no matches."""
         client = GitHubClient()
         content = b"No variables here"
-        env_vars = {"VAR1": "value1", "VAR2": "value2"}
+        env_vars = [
+            {"name": "VAR1", "value": "value1"},
+            {"name": "VAR2", "value": "value2"},
+        ]
 
         result = client._substitute_env_vars(content, env_vars)
         assert result == content
@@ -133,7 +136,7 @@ class TestGitHubClient:
         """Test environment variable substitution with multiple occurrences."""
         client = GitHubClient()
         content = b"actions/checkout and actions/checkout again"
-        env_vars = {"actions/checkout": "awesome-action"}
+        env_vars = [{"name": "actions/checkout", "value": "awesome-action"}]
 
         result = client._substitute_env_vars(content, env_vars)
         expected = b"awesome-action and awesome-action again"
@@ -143,10 +146,10 @@ class TestGitHubClient:
         """Test environment variable substitution with quoted content."""
         client = GitHubClient()
         content = b'{"repo": "actions/checkout", "version": "Checkout V4"}'
-        env_vars = {
-            "actions/checkout": "awesome-checkout-action",
-            "Checkout V4": "Super Checkout V5",
-        }
+        env_vars = [
+            {"name": "actions/checkout", "value": "awesome-checkout-action"},
+            {"name": "Checkout V4", "value": "Super Checkout V5"},
+        ]
 
         result = client._substitute_env_vars(content, env_vars)
         expected = (
@@ -159,11 +162,83 @@ class TestGitHubClient:
         client = GitHubClient()
         # Binary content that can't be decoded as UTF-8
         content = b"\x89PNG\r\n\x1a\n"
-        env_vars = {"test": "replacement"}
+        env_vars = [{"name": "test", "value": "replacement"}]
 
         result = client._substitute_env_vars(content, env_vars)
         # Should return original content unchanged
         assert result == content
+
+    def test_substitute_env_vars_regex(self) -> None:
+        """Test environment variable substitution with regex patterns."""
+        client = GitHubClient()
+        content = b"v1.2.3 and version 2.0.0 and v3.1.4"
+        env_vars = [
+            {
+                "name": r"v(\d+)\.(\d+)\.(\d+)",
+                "value": r"version-$1.$2.$3",
+                "regex": True,
+            }
+        ]
+
+        result = client._substitute_env_vars(content, env_vars)
+        expected = b"version-1.2.3 and version 2.0.0 and version-3.1.4"
+        assert result == expected
+
+    def test_substitute_env_vars_regex_case_insensitive(self) -> None:
+        """Test regex substitution with case-insensitive flag."""
+        client = GitHubClient()
+        content = b"checkout v4 and Checkout V4 and CHECKOUT V4"
+        env_vars = [
+            {
+                "name": r"checkout v4",
+                "value": "checkout-v5",
+                "regex": True,
+                "flags": "i",
+            }
+        ]
+
+        result = client._substitute_env_vars(content, env_vars)
+        expected = b"checkout-v5 and checkout-v5 and checkout-v5"
+        assert result == expected
+
+    def test_substitute_env_vars_regex_multiline(self) -> None:
+        """Test regex substitution with multiline flag."""
+        client = GitHubClient()
+        content = b"line1\nstart of line2\nline3"
+        env_vars = [
+            {"name": r"^start", "value": "beginning", "regex": True, "flags": "m"}
+        ]
+
+        result = client._substitute_env_vars(content, env_vars)
+        expected = b"line1\nbeginning of line2\nline3"
+        assert result == expected
+
+    def test_substitute_env_vars_invalid_regex(self) -> None:
+        """Test handling of invalid regex patterns."""
+        client = GitHubClient()
+        content = b"test content"
+        env_vars = [{"name": r"[invalid", "value": "replacement", "regex": True}]
+
+        # Should not raise exception, just skip invalid pattern
+        result = client._substitute_env_vars(content, env_vars)
+        assert result == content  # Content unchanged
+
+    def test_substitute_env_vars_mixed_replacements(self) -> None:
+        """Test mix of simple string and regex replacements."""
+        client = GitHubClient()
+        content = b"Repository: actions/checkout v1.0.0"
+        env_vars = [
+            {"name": "actions/checkout", "value": "awesome-action"},
+            {
+                "name": r"v(\d+)\.(\d+)\.(\d+)",
+                "value": r"version $1.$2.$3",
+                "regex": True,
+            },
+        ]
+
+        result = client._substitute_env_vars(content, env_vars)
+        expected = b"Repository: awesome-action version 1.0.0"
+        assert result == expected
 
     @responses.activate
     def test_download_file_with_env_substitution(self, tmp_path: Path) -> None:
@@ -176,10 +251,10 @@ class TestGitHubClient:
         )
 
         client = GitHubClient()
-        env_vars = {
-            "actions/checkout": "awesome-checkout-action",
-            "Checkout V4": "Super Checkout V5",
-        }
+        env_vars = [
+            {"name": "actions/checkout", "value": "awesome-checkout-action"},
+            {"name": "Checkout V4", "value": "Super Checkout V5"},
+        ]
 
         output_path = tmp_path / "config.yaml"
         content = client.download_file(
