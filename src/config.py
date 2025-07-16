@@ -225,4 +225,3 @@ def _load_envs_file(envs_file_path: Path) -> list[EnvConfig]:
     return validated_envs
 
 
-# type: ignore
