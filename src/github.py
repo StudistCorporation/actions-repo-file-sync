@@ -584,7 +584,7 @@ class GitHubClient:
                     check=True,
                     capture_output=True,
                 )
-                
+
                 # Check if we have staged changes that need to be preserved
                 staged_check = subprocess.run(
                     ["git", "diff", "--cached", "--name-only"],
@@ -592,14 +592,14 @@ class GitHubClient:
                     text=True,
                 )
                 has_staged_changes = bool(staged_check.stdout.strip())
-                
+
                 # First check if branch already exists locally
                 local_branches = subprocess.run(
                     ["git", "branch", "--list", branch_name],
                     capture_output=True,
                     text=True,
                 ).stdout.strip()
-                
+
                 if local_branches:
                     # Branch exists locally
                     # Check if we're currently on this branch
@@ -610,7 +610,9 @@ class GitHubClient:
                             check=True,
                             capture_output=True,
                         )
-                        logger.info(f"Already on branch {branch_name}, pulled latest changes")
+                        logger.info(
+                            f"Already on branch {branch_name}, pulled latest changes"
+                        )
                     else:
                         # We're on a different branch, checkout the existing branch
                         subprocess.run(
@@ -631,7 +633,7 @@ class GitHubClient:
                         check=True,
                         capture_output=True,
                     )
-                
+
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
                 # Branch doesn't exist, create new one from base_branch (usually main)
@@ -654,9 +656,11 @@ class GitHubClient:
                     if current_branch_result.stdout.strip() == branch_name:
                         # We're trying to create a branch we're already on
                         # This shouldn't happen, but handle it gracefully
-                        logger.warning(f"Already on branch {branch_name}, cannot create it again")
+                        logger.warning(
+                            f"Already on branch {branch_name}, cannot create it again"
+                        )
                         return True
-                    
+
                     subprocess.run(
                         ["git", "checkout", "-b", branch_name, f"origin/{base_branch}"],
                         check=True,
@@ -717,20 +721,20 @@ class GitHubClient:
                     capture_output=True,
                 )
                 logger.info("Added all changes")
-            
+
             # Now check if there are any changes to commit
             diff_result = subprocess.run(
                 ["git", "diff", "--cached", "--stat"],
                 capture_output=True,
                 text=True,
             )
-            
+
             if not diff_result.stdout.strip():
                 logger.info("No changes detected to commit - files are identical")
                 return True  # Return True to allow PR creation workflow to continue
-            
+
             logger.info(f"Changes to be committed:\n{diff_result.stdout}")
-            
+
             # Remove __pycache__ files from staging if they were added
             try:
                 subprocess.run(
