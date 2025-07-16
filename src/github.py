@@ -544,11 +544,54 @@ class GitHubClient:
                     check=True,
                     capture_output=True,
                 )
-                subprocess.run(
-                    ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
-                    check=True,
+
+                # Check if we have staged changes that need to be preserved
+                staged_check = subprocess.run(
+                    ["git", "diff", "--cached", "--name-only"],
                     capture_output=True,
+                    text=True,
                 )
+                # First check if branch already exists locally
+                local_branches = subprocess.run(
+                    ["git", "branch", "--list", branch_name],
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
+
+                if local_branches:
+                    # Branch exists locally
+                    # Check if we're currently on this branch
+                    if current_branch_result.stdout.strip() == branch_name:
+                        # We're already on the branch, just pull latest changes
+                        subprocess.run(
+                            ["git", "pull", "origin", branch_name, "--ff-only"],
+                            check=True,
+                            capture_output=True,
+                        )
+                        logger.info(
+                            f"Already on branch {branch_name}, pulled latest changes"
+                        )
+                    else:
+                        # We're on a different branch, checkout the existing branch
+                        subprocess.run(
+                            ["git", "checkout", branch_name],
+                            check=True,
+                            capture_output=True,
+                        )
+                        # Pull latest changes
+                        subprocess.run(
+                            ["git", "pull", "origin", branch_name, "--ff-only"],
+                            check=True,
+                            capture_output=True,
+                        )
+                else:
+                    # Create new local branch from origin
+                    subprocess.run(
+                        ["git", "checkout", "-b", branch_name, f"origin/{branch_name}"],
+                        check=True,
+                        capture_output=True,
+                    )
+
                 logger.info(f"Successfully checked out existing branch: {branch_name}")
             except subprocess.CalledProcessError:
                 # Branch doesn't exist, create new one from base_branch (usually main)
@@ -567,6 +610,15 @@ class GitHubClient:
 
                 # Create new branch from base_branch
                 try:
+                    # Check if we need to switch from current branch first
+                    if current_branch_result.stdout.strip() == branch_name:
+                        # We're trying to create a branch we're already on
+                        # This shouldn't happen, but handle it gracefully
+                        logger.warning(
+                            f"Already on branch {branch_name}, cannot create it again"
+                        )
+                        return True
+
                     subprocess.run(
                         ["git", "checkout", "-b", branch_name, f"origin/{base_branch}"],
                         check=True,
@@ -609,64 +661,46 @@ class GitHubClient:
             True if successful, False otherwise
         """
         try:
-            # Add files based on TypeScript pattern: add -N . first, then check diff
+            # First, always add the files to ensure they are tracked
             if files_to_add:
                 # Add specific files
                 for file_path in files_to_add:
                     subprocess.run(
-                        ["git", "add", file_path],
+                        ["git", "add", "-f", file_path],  # Use -f to force add
                         check=True,
                         capture_output=True,
                     )
+                logger.info(f"Added specified files: {files_to_add}")
             else:
-                # Add all files excluding __pycache__ directories (TypeScript pattern: git add -N .)
+                # Add all changes
                 subprocess.run(
-                    ["git", "add", "-N", "."],
+                    ["git", "add", "."],
                     check=True,
                     capture_output=True,
                 )
+                logger.info("Added all changes")
 
-                # Remove __pycache__ files from staging if they were added
-                try:
-                    subprocess.run(
-                        ["git", "reset", "HEAD", "*/__pycache__/*"],
-                        check=True,
-                        capture_output=True,
-                    )
-                    logger.info("Removed __pycache__ files from staging")
-                except subprocess.CalledProcessError:
-                    # No __pycache__ files to remove, which is fine
-                    pass
-
-            # Check if there are changes using git diff --name-only (like TypeScript)
-            result = subprocess.run(
-                ["git", "diff", "--name-only"],
+            # Now check if there are any changes to commit
+            diff_result = subprocess.run(
+                ["git", "diff", "--cached", "--stat"],
                 capture_output=True,
                 text=True,
             )
 
-            changed_files = result.stdout.strip()
-            if not changed_files:
-                logger.info("No changes detected to commit")
+            if not diff_result.stdout.strip():
+                logger.info("No changes detected to commit - files are identical")
                 return True  # Return True to allow PR creation workflow to continue
 
-            logger.info(f"Changes detected in files: {changed_files}")
+            logger.info(f"Changes to be committed:\n{diff_result.stdout}")
 
-            # Add all changes excluding __pycache__ directories (like TypeScript: git add .)
-            subprocess.run(
-                ["git", "add", "."],
-                check=True,
-                capture_output=True,
-            )
-
-            # Remove __pycache__ files from staging before commit
+            # Remove __pycache__ files from staging if they were added
             try:
                 subprocess.run(
                     ["git", "reset", "HEAD", "*/__pycache__/*"],
                     check=True,
                     capture_output=True,
                 )
-                logger.info("Removed __pycache__ files from final staging")
+                logger.info("Removed __pycache__ files from staging")
             except subprocess.CalledProcessError:
                 # No __pycache__ files to remove, which is fine
                 pass
@@ -678,12 +712,22 @@ class GitHubClient:
                 capture_output=True,
             )
 
-            # Push to remote
-            subprocess.run(
-                ["git", "push", "origin", branch_name],
-                check=True,
-                capture_output=True,
-            )
+            # Push to remote (with force-with-lease for safety when updating existing branches)
+            try:
+                # First try regular push
+                subprocess.run(
+                    ["git", "push", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
+            except subprocess.CalledProcessError as e:
+                # If regular push fails, try force-with-lease (safer than --force)
+                logger.warning(f"Regular push failed, trying force-with-lease: {e}")
+                subprocess.run(
+                    ["git", "push", "--force-with-lease", "origin", branch_name],
+                    check=True,
+                    capture_output=True,
+                )
 
             logger.info(f"Successfully pushed changes to branch: {branch_name}")
             return True
@@ -708,9 +752,9 @@ class GitHubClient:
         Returns:
             True if successful, False otherwise
         """
-        # Create branch
+        # Create/checkout branch
         if not self.create_branch(branch_name):
             return False
 
-        # Add files and push (pass None to use TypeScript-style "add all" behavior)
-        return self.add_files_and_push(branch_name, commit_message, None)
+        # Add files and push
+        return self.add_files_and_push(branch_name, commit_message, files_to_add)

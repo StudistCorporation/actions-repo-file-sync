@@ -225,26 +225,3 @@ def _load_envs_file(envs_file_path: Path) -> list[EnvConfig]:
     return validated_envs
 
 
-def validate_config(data: Any) -> Config:
-    """Validate configuration data structure.
-
-    Ensures the provided data matches the expected Config structure.
-
-    Args:
-        data: Raw configuration data to validate
-
-    Returns:
-        Validated configuration
-
-    Raises:
-        ValueError: If the configuration structure is invalid
-    """
-    # This function is used internally by load_config
-    # but is exposed for testing purposes
-    if not isinstance(data, dict):
-        raise ValueError("Configuration must be a dictionary")
-
-    if "sources" not in data:
-        raise ValueError("Configuration must contain 'sources' key")
-
-    return data  # type: ignore
