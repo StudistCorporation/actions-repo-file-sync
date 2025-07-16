@@ -551,8 +551,6 @@ class GitHubClient:
                     capture_output=True,
                     text=True,
                 )
-                has_staged_changes = bool(staged_check.stdout.strip())
-
                 # First check if branch already exists locally
                 local_branches = subprocess.run(
                     ["git", "branch", "--list", branch_name],
