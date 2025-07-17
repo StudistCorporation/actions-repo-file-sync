@@ -1,6 +1,6 @@
 - name: actions/checkout
   value: awesome-checkout-action
-- name: 'Checkout V(6|5|4|3|2|1)'
+- name: 'Checkout V4'
   value: Super Checkout V6
   regex: true
 - name: EXTERNAL_VAR
