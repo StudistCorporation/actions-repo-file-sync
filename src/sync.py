@@ -202,8 +202,16 @@ class RepoFileSync:
                     repo, ref, file_path, output_path, env_vars
                 )
 
+                # Check if file was actually written or skipped
+                file_written = getattr(self.github_client, "last_file_written", True)
+
                 result.add_success(full_file_id, len(content))
-                logger.info(f"✓ Downloaded {full_file_id} -> {output_path}")
+                if file_written:
+                    logger.info(f"✓ Downloaded {full_file_id} -> {output_path}")
+                else:
+                    logger.info(
+                        f"✓ Skipped {full_file_id} -> {output_path} (identical content)"
+                    )
 
             except Exception as e:
                 result.add_failure(full_file_id, e)

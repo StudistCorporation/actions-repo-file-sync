@@ -7,6 +7,7 @@ using the raw content API endpoint.
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import os
 import subprocess
@@ -152,20 +153,28 @@ class GitHubClient:
             )
 
         # Save to file if output path specified
+        file_written = True  # Default to True for backward compatibility
         if output_path:
-            self._save_file(content, output_path)
+            file_written = self._save_file(content, output_path)
+
+        # Store write status as an attribute for optional access
+        self.last_file_written = file_written
 
         return content
 
-    def _save_file(self, content: bytes, output_path: Path) -> None:
-        """Save content to a local file.
+    def _save_file(self, content: bytes, output_path: Path) -> bool:
+        """Save content to a local file if it differs from existing content.
 
         Creates parent directories if they don't exist and writes
-        the content to the specified path.
+        the content to the specified path only if the content is different
+        from what already exists.
 
         Args:
             content: File content to save
             output_path: Local path to save the file
+
+        Returns:
+            True if file was written (new or changed), False if skipped (identical)
 
         Raises:
             OSError: If file creation fails
@@ -174,11 +183,27 @@ class GitHubClient:
             # Create parent directories if they don't exist
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Check if file exists and has identical content
+            if output_path.exists():
+                # Calculate hash of new content
+                new_hash = hashlib.sha256(content).hexdigest()
+
+                # Calculate hash of existing content
+                with output_path.open("rb") as f:
+                    existing_content = f.read()
+                    existing_hash = hashlib.sha256(existing_content).hexdigest()
+
+                # Skip if content is identical
+                if new_hash == existing_hash:
+                    logger.info(f"Skipped {output_path} (identical content)")
+                    return False
+
             # Write content to file
             with output_path.open("wb") as f:
                 f.write(content)
 
             logger.info(f"Saved file to {output_path}")
+            return True
         except OSError as e:
             logger.error(f"Failed to save file to {output_path}: {e}")
             raise

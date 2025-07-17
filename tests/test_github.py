@@ -271,3 +271,101 @@ class TestGitHubClient:
         """Test token loading from environment variable."""
         client = GitHubClient()
         assert client.token == "env_token"
+
+    @responses.activate
+    def test_download_file_skip_identical_content(self, tmp_path: Path) -> None:
+        """Test that identical files are not overwritten."""
+        # Create output file with existing content
+        output_file = tmp_path / "test.txt"
+        existing_content = b"# Existing Content"
+        output_file.write_bytes(existing_content)
+
+        # Mock download returning same content
+        responses.add(
+            responses.GET,
+            "https://raw.githubusercontent.com/owner/repo/main/test.txt",
+            body=existing_content,
+            status=200,
+        )
+
+        # Get initial modification time
+        initial_mtime = output_file.stat().st_mtime
+
+        # Download file
+        client = GitHubClient()
+        content = client.download_file(
+            "owner/repo", "main", "test.txt", output_path=output_file
+        )
+
+        # Verify content was returned
+        assert content == existing_content
+
+        # Verify file was not written (skipped)
+        assert client.last_file_written is False
+
+        # Verify modification time didn't change
+        assert output_file.stat().st_mtime == initial_mtime
+
+    @responses.activate
+    def test_download_file_update_changed_content(self, tmp_path: Path) -> None:
+        """Test that changed files are properly updated."""
+        # Create output file with existing content
+        output_file = tmp_path / "test.txt"
+        old_content = b"# Old Content"
+        output_file.write_bytes(old_content)
+
+        # Mock download returning different content
+        new_content = b"# New Content"
+        responses.add(
+            responses.GET,
+            "https://raw.githubusercontent.com/owner/repo/main/test.txt",
+            body=new_content,
+            status=200,
+        )
+
+        # Download file
+        client = GitHubClient()
+        content = client.download_file(
+            "owner/repo", "main", "test.txt", output_path=output_file
+        )
+
+        # Verify new content was returned
+        assert content == new_content
+
+        # Verify file was written
+        assert client.last_file_written is True
+
+        # Verify file content was updated
+        assert output_file.read_bytes() == new_content
+
+    @responses.activate
+    def test_download_file_create_new(self, tmp_path: Path) -> None:
+        """Test that new files are created."""
+        # Ensure output file doesn't exist
+        output_file = tmp_path / "new.txt"
+        assert not output_file.exists()
+
+        # Mock download
+        content = b"# New File Content"
+        responses.add(
+            responses.GET,
+            "https://raw.githubusercontent.com/owner/repo/main/new.txt",
+            body=content,
+            status=200,
+        )
+
+        # Download file
+        client = GitHubClient()
+        downloaded_content = client.download_file(
+            "owner/repo", "main", "new.txt", output_path=output_file
+        )
+
+        # Verify content was returned
+        assert downloaded_content == content
+
+        # Verify file was written
+        assert client.last_file_written is True
+
+        # Verify file was created with correct content
+        assert output_file.exists()
+        assert output_file.read_bytes() == content
