@@ -1,3 +1,4 @@
+# Simple string replacements
 - name: actions/checkout
   value: awesome-checkout-action
 - name: Checkout V4
@@ -6,3 +7,13 @@
   value: from-external-file
 - name: PROJECT_NAME
   value: "Awesome Project"
+
+# Regex replacements
+- name: 'v(\d+)\.(\d+)\.(\d+)'
+  value: 'version-$1.$2.$3'
+  regex: true
+  
+- name: 'checkout.*v4'
+  value: 'checkout-v5'
+  regex: true
+  flags: 'i'

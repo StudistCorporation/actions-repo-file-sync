@@ -9,12 +9,16 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import re
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from urllib.parse import quote
 
 import requests
+
+if TYPE_CHECKING:
+    from .config import EnvConfig
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +100,7 @@ class GitHubClient:
         ref: str,
         file_path: str,
         output_path: Optional[Path] = None,
-        env_vars: Optional[dict[str, str]] = None,
+        env_vars: Optional[list[EnvConfig]] = None,
     ) -> bytes:
         """Download a file from a GitHub repository.
 
@@ -108,7 +112,7 @@ class GitHubClient:
             ref: Git reference (branch, tag, or commit hash)
             file_path: Path to the file within the repository
             output_path: Optional local path to save the file
-            env_vars: Optional environment variables for content substitution
+            env_vars: Optional environment configuration for content substitution
 
         Returns:
             File content as bytes (after environment variable substitution)
@@ -250,15 +254,16 @@ class GitHubClient:
             logger.debug(f"API response parsing failed: {e}")
             return None
 
-    def _substitute_env_vars(self, content: bytes, env_vars: dict[str, str]) -> bytes:
+    def _substitute_env_vars(self, content: bytes, env_vars: list[EnvConfig]) -> bytes:
         """Substitute environment variables in file content.
 
         Replaces occurrences of environment variable names with their values
-        in the file content. Only substitutes if the file appears to be text.
+        in the file content. Supports both simple string replacement and regex patterns.
+        Only substitutes if the file appears to be text.
 
         Args:
             content: Original file content as bytes
-            env_vars: Dictionary mapping variable names to values
+            env_vars: List of environment configurations with optional regex support
 
         Returns:
             Modified content with environment variables substituted
@@ -271,13 +276,48 @@ class GitHubClient:
             modified_content = text_content
             substitutions_made = 0
 
-            for name, value in env_vars.items():
-                if name in modified_content:
-                    old_content = modified_content
-                    modified_content = modified_content.replace(name, value)
-                    if modified_content != old_content:
-                        substitutions_made += 1
-                        logger.debug(f"Replaced '{name}' with '{value}'")
+            for env_config in env_vars:
+                name = env_config["name"]
+                value = env_config["value"]
+                is_regex = env_config.get("regex", False)
+                flags_str = env_config.get("flags", "")
+
+                if is_regex:
+                    # Handle regex substitution
+                    try:
+                        # Parse regex flags
+                        flags = 0
+                        if "i" in flags_str.lower():
+                            flags |= re.IGNORECASE
+                        if "m" in flags_str.lower():
+                            flags |= re.MULTILINE
+                        if "s" in flags_str.lower():
+                            flags |= re.DOTALL
+
+                        # Compile and apply regex
+                        pattern = re.compile(name, flags)
+                        old_content = modified_content
+                        # Convert $1, $2, etc. to \1, \2, etc. for Python regex
+                        replacement = value.replace("$", "\\")
+                        modified_content = pattern.sub(replacement, modified_content)
+
+                        if modified_content != old_content:
+                            substitutions_made += 1
+                            logger.debug(
+                                f"Replaced regex pattern '{name}' with '{value}' (flags: '{flags_str}')"
+                            )
+                    except re.error as e:
+                        logger.error(f"Invalid regex pattern '{name}': {e}")
+                        # Skip this substitution if regex is invalid
+                        continue
+                else:
+                    # Handle simple string replacement
+                    if name in modified_content:
+                        old_content = modified_content
+                        modified_content = modified_content.replace(name, value)
+                        if modified_content != old_content:
+                            substitutions_made += 1
+                            logger.debug(f"Replaced '{name}' with '{value}'")
 
             if substitutions_made > 0:
                 logger.info(

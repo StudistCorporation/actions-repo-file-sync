@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from .config import Config, SourceConfig
+from .config import Config, SourceConfig, EnvConfig
 from .github import GitHubClient
 
 logger = logging.getLogger(__name__)
@@ -133,17 +133,19 @@ class RepoFileSync:
         if not dry_run:
             output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Build environment variables dictionary
-        env_vars = {env["name"]: env["value"] for env in config["envs"]}
-        if env_vars:
-            logger.info(f"Using {len(env_vars)} environment variables for substitution")
+        # Use environment variables configuration directly
+        env_configs = config["envs"]
+        if env_configs:
+            logger.info(
+                f"Using {len(env_configs)} environment variables for substitution"
+            )
 
         # Process each source repository
         for source in config["sources"]:
             logger.info(f"Processing source: {source['repo']} ({source['ref']})")
 
             source_result = self._sync_source(
-                source, output_dir, dry_run, preserve_structure, env_vars
+                source, output_dir, dry_run, preserve_structure, env_configs
             )
 
             # Merge results
@@ -160,7 +162,7 @@ class RepoFileSync:
         output_dir: Path,
         dry_run: bool,
         preserve_structure: bool,
-        env_vars: dict[str, str],
+        env_configs: list[EnvConfig],
     ) -> SyncResult:
         """Synchronize files from a single source repository.
 
@@ -169,7 +171,7 @@ class RepoFileSync:
             output_dir: Output directory
             dry_run: Whether this is a dry run
             preserve_structure: Whether to preserve directory structure
-            env_vars: Environment variables for content substitution
+            env_configs: Environment configuration for content substitution
 
         Returns:
             Sync result for this source
@@ -199,7 +201,7 @@ class RepoFileSync:
 
                 # Download the file
                 content = self.github_client.download_file(
-                    repo, ref, file_path, output_path, env_vars
+                    repo, ref, file_path, output_path, env_configs
                 )
 
                 result.add_success(full_file_id, len(content))

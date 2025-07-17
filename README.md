@@ -44,12 +44,24 @@ sources:
 ### 2. 環境変数ファイル（`repo-file-sync.envs.yaml`）
 
 ```yaml
+# 単純な文字列置換
 - name: OLD_VALUE
   value: NEW_VALUE
 - name: actions/checkout
   value: awesome-checkout-action
 - name: PROJECT_NAME
   value: "My Awesome Project"
+
+# 正規表現を使った置換
+- name: 'v(\d+)\.(\d+)\.(\d+)'
+  value: 'version-$1.$2.$3'
+  regex: true
+  
+# 大文字小文字を無視する正規表現
+- name: 'checkout.*v4'
+  value: 'checkout-v5'
+  regex: true
+  flags: 'i'
 ```
 
 ## 使い方
@@ -246,20 +258,77 @@ uv run python -m src.cli --help
 
 ## 環境変数置換
 
-ダウンロードしたファイル内で文字列の置換が行われます：
+ダウンロードしたファイル内で文字列の置換が行われます。単純な文字列置換と正規表現による置換の両方をサポートしています。
 
-### 置換前のファイル内容
+### 単純な文字列置換
+
+#### 置換前のファイル内容
 ```yaml
 name: actions/checkout
 version: v4
 project: PROJECT_NAME
 ```
 
-### 置換後のファイル内容
+#### 置換後のファイル内容
 ```yaml
 name: awesome-checkout-action
 version: v4
 project: My Awesome Project
+```
+
+### 正規表現による置換
+
+#### 置換前のファイル内容
+```yaml
+version: v1.2.3
+checkout-action-v4: latest
+CHECKOUT-V4: production
+```
+
+#### 置換後のファイル内容（上記の設定例を使用）
+```yaml
+version: version-1.2.3
+checkout-v5: latest
+checkout-v5: production
+```
+
+### 正規表現の高度な使い方
+
+#### バージョン番号の変換
+```yaml
+- name: 'v(\d+)\.(\d+)\.(\d+)'
+  value: 'version-$1.$2.$3'
+  regex: true
+```
+`v1.2.3` → `version-1.2.3`
+
+#### 大文字小文字を無視したマッチング
+```yaml
+- name: 'checkout.*v4'
+  value: 'checkout-v5'
+  regex: true
+  flags: 'i'
+```
+`checkout-v4`, `Checkout-V4`, `CHECKOUT-V4` → すべて `checkout-v5` に置換
+
+#### 複数行にまたがるパターン
+```yaml
+- name: '^prefix'
+  value: 'new-prefix'
+  regex: true
+  flags: 'm'
+```
+各行の先頭にある `prefix` を置換
+
+### 利用可能な正規表現フラグ
+
+- `i` - 大文字小文字を無視（IGNORECASE）
+- `m` - 複数行モード（MULTILINE） - `^` と `$` が各行の開始・終了にマッチ
+- `s` - ドットが改行にもマッチ（DOTALL）
+
+複数のフラグを組み合わせる場合：
+```yaml
+flags: 'im'  # 大文字小文字を無視 + 複数行モード
 ```
 
 ## テスト

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, NotRequired
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,18 @@ logger = logging.getLogger(__name__)
 class EnvConfig(TypedDict):
     """Configuration for an environment variable.
     Defines a name-value pair for environment variable substitution.
+
+    Attributes:
+        name: The pattern to match (string or regex pattern)
+        value: The replacement value
+        regex: Whether to treat 'name' as a regular expression (optional, default: False)
+        flags: Regular expression flags (optional, e.g., "i" for case-insensitive)
     """
 
     name: str
     value: str
+    regex: NotRequired[bool]
+    flags: NotRequired[str]
 
 
 class SourceConfig(TypedDict):
@@ -217,6 +225,24 @@ def _load_envs_file(envs_file_path: Path) -> list[EnvConfig]:
             "name": name,
             "value": value,
         }
+
+        # Add optional fields if present
+        if "regex" in env:
+            regex = env["regex"]
+            if not isinstance(regex, bool):
+                raise ValueError(
+                    f"Environment variable {i} in external file: 'regex' must be a boolean"
+                )
+            validated_env["regex"] = regex
+
+        if "flags" in env:
+            flags = env["flags"]
+            if not isinstance(flags, str):
+                raise ValueError(
+                    f"Environment variable {i} in external file: 'flags' must be a string"
+                )
+            validated_env["flags"] = flags
+
         validated_envs.append(validated_env)
 
     logger.info(
