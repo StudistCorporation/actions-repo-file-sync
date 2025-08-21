@@ -222,7 +222,7 @@ sources:
             )
 
             config = load_config(config_file)
-            env_vars = {env["name"]: env["value"] for env in config["envs"]}
+            env_configs = config["envs"]
 
             # Mock dry-run by not actually writing files
             output_dir = tmp_path / "output"
@@ -233,7 +233,7 @@ sources:
             # In a real dry-run, we would download but not write
             # For this test, we'll just verify the download would work
             content = client.download_file("test/repo", "main", "test.txt")
-            substituted = client._substitute_env_vars(content, env_vars)
+            substituted = client._substitute_env_vars(content, env_configs)
 
             assert substituted == b"Content with test_value"
 

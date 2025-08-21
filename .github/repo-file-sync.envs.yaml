@@ -1,8 +1,9 @@
 - name: actions/checkout
   value: awesome-checkout-action
-- name: Checkout V4
-  value: Super Checkout V5
+- name: 'Checkout V4'
+  value: Super Checkout V6
+  regex: true
 - name: EXTERNAL_VAR
   value: from-external-file
-- name: PROJECT_NAME
-  value: "Awesome Project"
+- name: '[A-Z]+_NAME'
+  value: Super Awesome Project
