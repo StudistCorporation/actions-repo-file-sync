@@ -11,7 +11,7 @@ interface Config {
   pr_search_range: string
 }
 
-interface File {
+interface SyncFile {
   src: string
   dest: string
 }
@@ -21,5 +21,5 @@ interface Repository {
   name: string
   full_name: string
   ref?: string
-  files?: File[]
+  files?: SyncFile[]
 }
