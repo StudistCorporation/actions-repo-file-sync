@@ -17,9 +17,9 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@tsconfig/node16": "^1.0.3",
+    "@tsconfig/node24": "^24.0.0",
     "@types/js-yaml": "^4.0.5",
-    "@types/node": "^16.11.4",
-    "typescript": "^4.4.4"
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
   }
 }
