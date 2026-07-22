@@ -11,9 +11,8 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.10.0",
-    "@actions/github": "^5.1.1",
-    "@octokit/rest": "^19.0.5",
-    "@vercel/ncc": "^0.34.0",
+    "@octokit/rest": "^22.0.0",
+    "@vercel/ncc": "^0.44.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
